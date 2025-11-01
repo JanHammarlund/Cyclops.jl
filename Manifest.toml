@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.12.1"
+manifest_format = "2.0"
+project_hash = "2e15e198d96757dfcf6b91d212fb60730c0b1ff7"
+
+[[deps.CYCLOPS]]
+path = "."
+uuid = "d909977f-157f-4d80-91d6-6db50a32a137"
+version = "1.0.0-DEV"

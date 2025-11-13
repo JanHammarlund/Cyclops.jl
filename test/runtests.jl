@@ -24,10 +24,10 @@ using Random
 end
 
 @testset "CYCLOPS Model Parameters" begin
-    testCyclops1 = cyclops(5, 3)
+    Random.seed!(1234); testCyclops1 = cyclops(5, 3)
     nmodelparams1 = nparams(testCyclops1)
 
-    testCyclops2 = cyclops(5)
+    Random.seed!(1234); testCyclops2 = cyclops(5)
     nmodelparams2 = nparams(testCyclops2)
 
     @test testCyclops1 isa cyclops

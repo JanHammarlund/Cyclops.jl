@@ -57,43 +57,50 @@ using Random
             @test any(m_oplus -> m_oplus.sig == Tuple{typeof(⊕), Number, AbstractArray{<:Number}}, m_oplus)
             @test any(m_oplus -> m_oplus.sig == Tuple{typeof(⊕), AbstractArray{<:Number}, AbstractArray{<:Number}}, m_oplus)
         end
-
+        
         @testset "ominus" begin
             m_ominus = methods(⊖);
             @test any(m_ominus -> m_ominus.sig == Tuple{typeof(⊖), AbstractArray{<:Number}, Number}, m_ominus)
             @test any(m_ominus -> m_ominus.sig == Tuple{typeof(⊖), Number, AbstractArray{<:Number}}, m_ominus)
             @test any(m_ominus -> m_ominus.sig == Tuple{typeof(⊖), AbstractArray{<:Number}, AbstractArray{<:Number}}, m_ominus)
         end
-
+        
         @testset "otimes" begin
             m_otimes = methods(⊗);
             @test any(m_otimes -> m_otimes.sig == Tuple{typeof(⊗), AbstractArray{<:Number}, Union{Number, AbstractArray{<:Number}}}, m_otimes)
         end
-
+        
         @testset "odot" begin
             m_odot = methods(⊙);
             @test any(m_odot -> m_odot.sig == Tuple{typeof(⊙), AbstractArray{<:Number}, Number}, m_odot)
             @test any(m_odot -> m_odot.sig == Tuple{typeof(⊙), Number, AbstractArray{<:Number}}, m_odot)
             @test any(m_odot -> m_odot.sig == Tuple{typeof(⊙), AbstractArray{<:Number}, AbstractArray{<:Number}}, m_odot)
         end
-
+        
         @testset "oslash" begin
             m_oslash = methods(⊘);
             @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), AbstractArray{<:Number}, Number}, m_oslash)
             @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), Number, AbstractArray{<:Number}}, m_oslash)
             @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}, m_oslash)
         end
-
+        
     end
-
-    @test cyclops isa DataType          # 1
-    @test length(methods(cyclops)) == 5 # 2
-
+    
     @testset "cyclops constructor" begin # 41 tests
-
-        @test length(methods(CheckCyclopsInput)) == 1   # 1
+        
+        @test cyclops isa DataType          # 1
+        @test length(methods(cyclops)) == 5 # 2
+        
+        m_cyclops = methods(cyclops);
+        @test any(m_cyclops -> m_cyclops.sig == Tuple{Type{cyclops}, Int64, Int64, Int64}, m_cyclops)
+        @test any(m_cyclops -> m_cyclops.sig == Tuple{Type{cyclops}, Int64, Int64}, m_cyclops)
+        @test any(m_cyclops -> m_cyclops.sig == Tuple{Type{cyclops}, Int64}, m_cyclops)
 
         @testset "invalid arguments" begin # 18 tests
+            
+            m_CheckCyclopsInput = methods(CheckCyclopsInput);
+            @test length(methods(CheckCyclopsInput)) == 1   # 1
+            @test any(m_CheckCyclopsInput -> m_CheckCyclopsInput.sig == Tuple{typeof(CheckCyclopsInput), Int64, Int64, Int64}, m_CheckCyclopsInput)
 
             # c < 2 error, 4 tests
             @testset "invalid c" begin
@@ -170,22 +177,29 @@ using Random
         end
 
     end
-
-    @testset "cyclops function" begin
-
-        @test length(methods(CheckMultiHotTransformation)) == 1 # 1
-        @test length(methods(mhe)) == 1                         # 2
-        @test length(methods(mhd)) == 1                         # 3
-        @test length(methods(hsn)) == 1                         # 4
-
-        @testset "multi-hot node" begin # 26 tests
-
-            @testset "invalid arguments" begin # 18 tests
     
+    @testset "cyclops function" begin
+        
+        @testset "multi-hot node" begin # 26 tests
+            
+            @test length(methods(CheckMultiHotTransformation)) == 1 # 1
+            m_CheckMultiHotTransformation = methods(CheckMultiHotTransformation);
+            @test any(m_CheckMultiHotTransformation -> m_CheckMultiHotTransformation.sig == Tuple{typeof(CheckMultiHotTransformation), Vector{Float32}, Vector{Int32}, Array{Float32}}, m_CheckMultiHotTransformation)
+
+            @test length(methods(mhe)) == 1                         # 2
+            m_mhe = methods(mhe);
+            @test any(m_mhe -> m_mhe.sig == Tuple{typeof(mhe), Vector{Float32}, Vector{Int32}, cyclops}, m_mhe)
+            
+            @test length(methods(mhd)) == 1                         # 3
+            m_mhd = methods(mhd);
+            @test any(m_mhd -> m_mhd.sig == Tuple{typeof(mhd), Vector{Float32}, Vector{Int32}, cyclops}, m_mhd)
+            
+            @testset "invalid arguments" begin # 18 tests
+                
                 # Model parameters and model input don't have same number of rows, 9 tests
                 @testset "n mismatch input" begin # 9 tests
                     Random.seed!(1234); test_cyclops = cyclops(5, 3, 2);
-                    @test length(methods(test_cyclops)) == 3 # 1
+
                     @test_throws CyclopsInputMultiHotDimensionMismatch CheckMultiHotTransformation(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops.scale) # 2
                     @test_throws "Input = 6 ≠ 5 = Multi-hot Parameters" CheckMultiHotTransformation(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops.scale)    # 3
                     @test_throws CyclopsInputMultiHotDimensionMismatch mhe(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops)   # 4
@@ -195,7 +209,7 @@ using Random
                     @test_throws CyclopsInputMultiHotDimensionMismatch test_cyclops(ones(Float32, 6), Int32.([1, 0, 1]))    # 8
                     @test_throws "Input = 6 ≠ 5 = Multi-hot Parameters" test_cyclops(ones(Float32, 6), Int32.([1, 0, 1]))   # 9
                 end
-    
+                
                 # Model parameters and multi-hot encoding don't have fitting dimensions, 9 tests
                 @testset "m mismatch input" begin # 9 tests
                     Random.seed!(1234); test_cyclops = cyclops(5, 3, 2);
@@ -209,9 +223,9 @@ using Random
                     @test_throws CyclopsMultiHotParameterDimensionMismatch test_cyclops(ones(Float32, 5), Int32.([1, 0]))   # 8
                     @test_throws "Multi-hot encoding = 2 ≠ 3 = Multi-hot Parameters" test_cyclops(ones(Float32, 5), Int32.([1, 0])) # 9
                 end
-    
+                
             end
-
+            
             @testset "valid arguments" begin # 8 tests
                 n = 5; m = 3; c = 2
                 h = Int32.([1, 0, 1])
@@ -227,29 +241,37 @@ using Random
                 
                 manual_mhe_out = x .* (1 .+ test_cyclops.scale[:, 1] .+ test_cyclops.scale[:, 3]) .+ test_cyclops.mhoffset[:, 1] .+ test_cyclops.mhoffset[:, 3] .+ reshape(test_cyclops.offset, length(x))
                 @test isapprox(mhe_out, manual_mhe_out, atol=1E-6)  # 4
-
+                
                 mhd_out = mhd(mhe_out, h, test_cyclops)
                 @test mhd_out isa Array{Float32}        # 5
                 @test size(mhd_out) == (n,)             # 6
                 @test isapprox(x, mhd_out, atol=1E-6)   # 7
-
+                
                 manual_mhd_out = (mhe_out .- test_cyclops.mhoffset[:,1] .- test_cyclops.mhoffset[:,3] .- reshape(test_cyclops.offset, length(mhe_out))) ./ (1 .+ test_cyclops.scale[:,1] .+ test_cyclops.scale[:,3])
                 @test isapprox(mhd_out, manual_mhd_out, atol=1E-6)  # 8
             end
             
         end
-
+        
         @testset "hypersphere node" begin # 15 tests
 
-            @testset "invalid arguments" begin # 11 tests
+            @test length(methods(CheckHSNdomain)) == 1
+            m_CheckHSNdomain = methods(CheckHSNdomain);
+            @test any(m_CheckHSNdomain -> m_CheckHSNdomain.sig == Tuple{typeof(CheckHSNdomain), Vector{Float32}}, m_CheckHSNdomain)
 
+            @test length(methods(hsn)) == 1
+            m_hsn = methods(hsn);
+            @test any(m_hsn -> m_hsn.sig == Tuple{typeof(hsn), Vector{Float32}}, m_hsn)
+            
+            @testset "invalid arguments" begin # 11 tests
+                
                 @testset "NaN erros" begin # 4 tests
                     @test_throws CyclopsHyperSphereDomainError CheckHSNdomain([1f0, NaN32]) # 1
                     @test_throws "`NaN` at [2]" CheckHSNdomain([1f0, NaN32])                # 2
                     @test_throws CyclopsHyperSphereDomainError hsn([1f0, NaN32])            # 3
                     @test_throws "`NaN` at [2]" hsn([1f0, NaN32])                           # 4
                 end
-
+                
                 @testset "All 0 errors" begin # 4 tests
                     @test_throws CyclopsHyperSphereDivideError CheckHSNdomain([0f0, 0f0])   # 1
                     @test_throws "All values passed to the hypershpere node are `0`." CheckHSNdomain([0f0, 0f0])    # 2
@@ -270,6 +292,7 @@ using Random
                 @test hsn_in isa Array{Float32} # 1
 
                 hsn_out = hsn(hsn_in);
+                @test hsn_out isa Array{Float32}
 
                 @test hsn_out == Float32.([sqrt(2)^-1, sqrt(2)^-1]) # 2
                 @test isapprox(hsn_out, hsn(hsn_out), atol=1E-6)    # 3
@@ -280,14 +303,24 @@ using Random
 
         @testset "cyclops transformation" begin
 
+            Random.seed!(1234); test_cyclops = cyclops(5, 3, 2);
+            m_test_cyclops = methods(test_cyclops);
+                    
+            @test length(methods(test_cyclops)) == 3 # 1
+            @test any(m_test_cyclops -> m_test_cyclops.sig == Tuple{cyclops, Vector{Float32}}, m_test_cyclops)
+            @test any(m_test_cyclops -> m_test_cyclops.sig == Tuple{cyclops, Vector{Float32}, Vector{Int32}}, m_test_cyclops)
+            @test any(m_test_cyclops -> m_test_cyclops.sig == Tuple{cyclops, Vector{Float32}, Missing}, m_test_cyclops)
+
             @testset "invalid arguments" begin
                 n = 5; m = 3; c = 2;
                 Random.seed!(1234); m1 = cyclops(n, 0, c);
+                Random.seed!(1234); m2 = cyclops(n, m, c);
                 
                 Random.seed!(1234); x1 = rand(Float64, n);
                 h = zeros(Int32, m);
                 
                 @test_throws MethodError m1(x1)
+                @test_throws MethodError m2(x1)
 
                 Random.seed!(1234); x2 = rand(Float32, n);
 
@@ -297,23 +330,33 @@ using Random
             @testset "valid arguments" begin
                 n = 5; m = 3; c = 2;
                 Random.seed!(1234); m1 = cyclops(n, m, c);
+                Random.seed!(1234); m2 = cyclops(n, 0, c);
                 
                 Random.seed!(1234); x = rand(Float32, n);
                 h = zeros(Int32, m);
                 
                 m_out_with_h = m1(x, h);
                 @test m_out_with_h isa Array{Float32}
+                @test size(m_out_with_h) == (n,)
                 
-                m_out_without_h = m1(x);
+                m1_out_without_h = m1(x);
                 @test m_out_without_h isa Array{Float32}
+                @test size(m_out_without_h) == (n,)
                 
-                @test isapprox(m_out_with_h, m_out_without_h, atol=1E-6)
+                @test isapprox(m_out_with_h, m1_out_without_h, atol=1E-6)
+                
+                m2_out_without_h = m2(x);
+                @test m2_out_without_h isa Array{Float32}
+                @test size(m2_out_without_h) == (n,)
+                @test isapprox(m1_out_without_h, m2_out_without_h, atol=1E-6)
                 
                 Random.seed!(1234); m2 = cyclops(n, m, c);
                 @test (@test_logs (:warn, r"without") m2(x2)) == m2(x2)
+
             end
 
         end
+
     end
 
 end

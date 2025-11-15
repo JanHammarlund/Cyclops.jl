@@ -122,7 +122,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     struct cyclops
         scale::Array{Float32}
         mhoffset::Array{Float32}
-        offset::Array{Float32}
+        offset::Union{Vector{Float32}, Array{Float32}}
         densein::Dense
         denseout::Dense
     end
@@ -145,7 +145,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     - `c` (`c ∈ ℕ⁺`, `c ≥ 2`): Dimensionality of the n-sphere node, where `2 ≤ c < n`.
 
     # Initialization
-    `scale`, `mhoffset`, and `offset` are initialized using random normal distributions. 
+    `scale`, `mhoffset`, and `offset` are initialized as all zeros. 
     `densein` and `denseout` are initialized according to `Flux.Dense`.
 
     `n` dictates the number of rows in `scale`, `mhoffset`, `offset`, 
@@ -204,9 +204,10 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     """
     function cyclops(n_eig::Int, n_multi::Int=0, n_circ::Int=2)        
         CheckCyclopsInput(n_eig, n_multi, n_circ)
-        n_batch = n_multi == 0 ? 0 : 1
+        mhparameters = zeros(Float32, n_eig, n_multi)
+        offset = n_multi == 0 ? zeros(Float32, n_eig, n_multi) : zeros(Float32, n_eig)
 
-        return cyclops(rand(Float32, n_eig, n_multi), rand(Float32, n_eig, n_multi), rand(Float32, n_eig, n_batch), Dense(n_eig => n_circ), Dense(n_circ => n_eig))
+        return cyclops(deepcopy(mhparameters), deepcopy(mhparameters), offset, Dense(n_eig => n_circ), Dense(n_circ => n_eig))
     end
 
     """

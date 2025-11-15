@@ -46,8 +46,11 @@ using Random
 @testset "CYCLOPS" begin
 
     @test cyclops isa DataType
+    @test length(methods(cyclops)) == 5
 
     @testset "cyclops constructor" begin
+
+        @test length(methods(CheckCyclopsInput)) == 1
 
         @testset "invalid arguments" begin
 
@@ -92,37 +95,43 @@ using Random
                 n = 5; m = 3; c = 2;
                 Random.seed!(1234); test_cyclops = cyclops(n, m)
                 nmodelparams1 = nparams(test_cyclops)
-                @test test_cyclops isa cyclops
-                @test length(propertynames(test_cyclops)) == 5
-                @test nmodelparams1 == ((n*m)+(n*m)+n+(c*n)+c+(n*c)+n)
-                @test size(test_cyclops.scale) == (n, m)
-                @test size(test_cyclops.mhoffset) == (n, m)
-                @test size(test_cyclops.offset) == (n, 1)
-                @test size(test_cyclops.densein.weight) == (c, n)
-                @test size(test_cyclops.densein.bias) == (c,)
-                @test size(test_cyclops.denseout.weight) == (n, c)
-                @test size(test_cyclops.denseout.bias) == (n,)
+                @test test_cyclops isa cyclops                          # 1
+                @test length(methods(test_cyclops)) == 3                # 2
+                @test length(propertynames(test_cyclops)) == 5          # 3
+                @test nmodelparams1 == ((n*m)+(n*m)+n+(c*n)+c+(n*c)+n)  # 4
+                @test size(test_cyclops.scale) == (n, m)                # 5
+                @test size(test_cyclops.mhoffset) == (n, m)             # 6
+                @test size(test_cyclops.offset) == (n, 1)               # 7
+                @test size(test_cyclops.densein.weight) == (c, n)       # 8
+                @test size(test_cyclops.densein.bias) == (c,)           # 9
+                @test size(test_cyclops.denseout.weight) == (n, c)      # 10
+                @test size(test_cyclops.denseout.bias) == (n,)          # 11
             end
 
             @testset "standard model" begin
                 n = 5; m = 0; c = 2;
                 Random.seed!(1234); test_cyclops = cyclops(n)
                 nmodelparams = nparams(test_cyclops)
-                @test test_cyclops isa cyclops
-                @test length(propertynames(test_cyclops)) == 5
-                @test nmodelparams == ((c*n)+c+(n*c)+n)
-                @test size(test_cyclops.scale) == (n, m)
-                @test size(test_cyclops.mhoffset) == (n, m)
-                @test size(test_cyclops.offset) == (n, 0)
-                @test size(test_cyclops.densein.weight) == (c, n)
-                @test size(test_cyclops.densein.bias) == (c,)
-                @test size(test_cyclops.denseout.weight) == (n, c)
-                @test size(test_cyclops.denseout.bias) == (n,)
+                @test test_cyclops isa cyclops                          # 1
+                @test length(methods(test_cyclops)) == 3                # 2
+                @test length(propertynames(test_cyclops)) == 5          # 3
+                @test nmodelparams == ((c*n)+c+(n*c)+n)                 # 4
+                @test size(test_cyclops.scale) == (n, m)                # 5
+                @test size(test_cyclops.mhoffset) == (n, m)             # 6
+                @test size(test_cyclops.offset) == (n, 0)               # 7
+                @test size(test_cyclops.densein.weight) == (c, n)       # 8
+                @test size(test_cyclops.densein.bias) == (c,)           # 9
+                @test size(test_cyclops.denseout.weight) == (n, c)      # 10
+                @test size(test_cyclops.denseout.bias) == (n,)          # 11
             end
         end
     end
 
     @testset "cyclops function" begin
+
+        @test length(methods(CheckMultiHotTransformation)) == 1
+        @test length(methods(mhe)) == 1
+        @test length(methods(mhd)) == 1
 
         @testset "multi-hot node" begin
 
@@ -131,6 +140,7 @@ using Random
                 # Model parameters and model input don't have same number of rows
                 @testset "n mismatch input" begin
                     Random.seed!(1234); test_cyclops = cyclops(5, 3, 2);
+                    @test length(methods(test_cyclops)) == 1
                     @test_throws CyclopsInputMultiHotDimensionMismatch CheckMultiHotTransformation(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops.scale)
                     @test_throws "Input = 6 ≠ 5 = Multi-hot Parameters" CheckMultiHotTransformation(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops.scale)
                     @test_throws CyclopsInputMultiHotDimensionMismatch mhe(ones(Float32, 6), Int32.([1, 0, 1]), test_cyclops)
@@ -144,6 +154,7 @@ using Random
                 # Model parameters and multi-hot encoding don't have fitting dimensions
                 @testset "m mismatch input" begin
                     Random.seed!(1234); test_cyclops = cyclops(5, 3, 2);
+                    @test length(methods(test_cyclops)) == 1
                     @test_throws CyclopsMultiHotParameterDimensionMismatch CheckMultiHotTransformation(ones(Float32, 5), Int32.([1, 0]), test_cyclops.scale)
                     @test_throws "Multi-hot encoding = 2 ≠ 3 = Multi-hot Parameters" CheckMultiHotTransformation(ones(Float32, 5), Int32.([1, 0]), test_cyclops.scale)
                     @test_throws CyclopsMultiHotParameterDimensionMismatch mhe(ones(Float32, 5), Int32.([1, 0]), test_cyclops)
@@ -158,9 +169,10 @@ using Random
 
             @testset "valid arguments" begin
                 n = 5; m = 3; c = 2
-                Random.seed!(1234); test_cyclops = cyclops(n, m, c);
                 h = Int32.([1, 0, 1])
                 x = ones(Float32, n)
+                
+                Random.seed!(1234); test_cyclops = cyclops(n, m, c);
                 
                 @test CheckMultiHotTransformation(x, h, test_cyclops.scale) isa Nothing
                 
@@ -180,12 +192,42 @@ using Random
         end
 
         @testset "hypersphere node" begin
+
+            @test length(methods(hsn)) == 1
+
             @testset "invalid arguments" begin
-                
+
+                @testset "NaN erros" begin
+                    @test_throws CyclopsHyperSphereDomainError CheckHSNdomain([1f0, NaN32])
+                    @test_throws "`NaN` at [2]" CheckHSNdomain([1f0, NaN32])
+                    @test_throws CyclopsHyperSphereDomainError hsn([1f0, NaN32])
+                    @test_throws "`NaN` at [2]" hsn([1f0, NaN32])
+                end
+
+                @testset "All 0 errors" begin
+                    @test_throws CyclopsHyperSphereDivideError CheckHSNdomain([0f0, 0f0])
+                    @test_throws "All values passed to the hypershpere node are `0`." CheckHSNdomain([0f0, 0f0])
+                    @test_throws CyclopsHyperSphereDivideError hsn([0f0, 0f0])
+                    @test_throws "All values passed to the hypershpere node are `0`." hsn([0f0, 0f0])                    
+                end
+
+                @testset "Method errors" begin
+                    @test_throws MethodError CheckHSNdomain([1.1, 1.1])
+                    @test_throws MethodError CheckHSNdomain([1, 1])
+                    @test_throws MethodError CheckHSNdomain("1, 1")
+                end
             end
 
             @testset "valid arguments" begin
-                
+                hsn_in = [1f0, 1f0];
+
+                @test hsn_in isa Array{Float32}
+
+                hsn_out = hsn(hsn_in);
+
+                @test hsn_out == Float32.([sqrt(2)^-1, sqrt(2)^-1])
+                @test isapprox(hsn_out, hsn(hsn_out), atol=1E-6)
+                @test isapprox(atan(hsn_out...)*180/pi, 45, atol=1E-6)
             end
             
         end

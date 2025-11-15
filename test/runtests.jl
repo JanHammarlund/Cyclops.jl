@@ -88,7 +88,7 @@ using Random
         # Tuple{typeof(⊖), AbstractArray{<:Number}, AbstractArray{<:Number}}
         @test x ⊖ y2 == [-2, 0, 2]
         @test [x x] ⊖ y2 == [x x] ⊖ [y2 y2] == [-2 -2; 0 0; 2 2]
-        @test y2 ⊖ [x x] == [2 2; 0 0; -2 -2]
+        @test y2 ⊖ [x x] == [y2 y2] ⊖ [x x] == [2 2; 0 0; -2 -2]
 
         # Tuple{typeof(⊖), Number, Number}
         @test_throws MethodError 1 ⊖ 1
@@ -164,7 +164,7 @@ using Random
         # Tuple{typeof(⊙), Number, Number}
         @test_throws MethodError 1 ⊙ 1
 
-        # DimensionMismatch
+        # Dimension Mismatch
         @test_throws DimensionMismatch ones(3) ⊙ ones(4)
         @test_throws "x has 3 and y has 4." ones(3) ⊙ ones(4)
 
@@ -176,10 +176,44 @@ using Random
     end
     
     @testset "oslash" begin
-        m_oslash = methods(⊘);
-        @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), AbstractArray{<:Number}, Number}, m_oslash)
-        @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), Number, AbstractArray{<:Number}}, m_oslash)
-        @test any(m_oslash -> m_oslash.sig == Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}, m_oslash)
+        oslash_found_methods = Set(m.sig for m in methods(⊘));
+        oslash_expected_methods = Set([
+            Tuple{typeof(⊘), AbstractArray{<:Number}, Number},
+            Tuple{typeof(⊘), Number, AbstractArray{<:Number}},
+            Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}
+        ])
+
+        @test oslash_expected_methods ⊆ oslash_found_methods
+
+        x = [1, 2, 3]   # ::AbstractArray{<:Number}
+        y1 = 2          # ::Number
+        y2 = [3, 2, 1]  # ::AbstractArray{<:Number}
+
+        # Tuple{typeof(⊘), AbstractArray{<:Number}, Number}
+        @test x ⊘ y1 == [0.5, 1, 1.5]
+        @test [x x] ⊘ y1 == [0.5 0.5; 1 1; 1.5 1.5]
+
+        # Tuple{typeof(⊘), Number, AbstractArray{<:Number}}
+        @test y1 ⊘ x == [2, 1, 2/3]
+        @test y1 ⊘ [x x] == [2 2; 1 1; 2/3 2/3]
+
+        # Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}
+        @test x ⊘ y2 == [1/3, 1, 3]
+        @test [x x] ⊘ y2 == [x x] ⊘ [y2 y2] == [1/3 1/3; 1 1; 3 3]
+        @test y2 ⊘ [x x] == [y2 y2] ⊘ [x x] == [3 3; 1 1; 1/3 1/3]
+
+        # Tuple{typeof(⊘), Number, Number}
+        @test_throws MethodError 1 ⊘ 1
+
+        # Dimension Mismatch
+        @test_throws DimensionMismatch ones(3) ⊘ ones(4)
+        @test_throws "x has 3 and y has 4." ones(3) ⊘ ones(4)
+
+        @test_throws DimensionMismatch ones(3, 2) ⊘ ones(5, 7)
+        @test_throws "x and y don't have matching dimensions" ones(3, 2) ⊘ ones(5, 7)
+
+        @test_throws DimensionMismatch ones(3, 2) ⊘ ones(4)
+        @test_throws "x has 3 and y has 4." ones(3, 2) ⊘ ones(4)
     end
     
 end

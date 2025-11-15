@@ -21,9 +21,9 @@ using Random
 # nparams 
 
 # ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
-@testset "operators" begin
+@testset "operators" begin # 73 tests
 
-    @testset "oplus" begin
+    @testset "oplus" begin # 14 tests
         oplus_found_methods = Set(m.sig for m in methods(⊕));
         oplus_expected_methods = Set([
             Tuple{typeof(⊕), Number, AbstractArray{<:Number}},
@@ -61,9 +61,9 @@ using Random
 
         @test_throws DimensionMismatch [x x] ⊕ ones(4)
         @test_throws "x has 3 and y has 4." [x x] ⊕ ones(4)
-    end
+    end     # oplus, 14 tests
     
-    @testset "ominus" begin
+    @testset "ominus" begin # 15 tests
         ominus_found_methods = Set(m.sig for m in methods(⊖));
         ominus_expected_methods = Set([
             Tuple{typeof(⊖), Number, AbstractArray{<:Number}},
@@ -102,9 +102,9 @@ using Random
 
         @test_throws DimensionMismatch [x x] ⊖ ones(4)
         @test_throws "x has 3 and y has 4." [x x] ⊖ ones(4)
-    end
+    end     # ominus, 15 tests
     
-    @testset "otimes" begin
+    @testset "otimes" begin # 9 tests
         otimes_found_methods = Set(m.sig for m in methods(⊗));
         otimes_expected_methods = Set([
             Tuple{typeof(⊗), AbstractArray{<:Number}, Union{Number, AbstractArray{<:Number}}}
@@ -133,9 +133,9 @@ using Random
 
         @test_throws DimensionMismatch [x 2*x] ⊗ 1
         @test_throws "x has 2 columns and y has 1 rows." [x 2*x] ⊗ 1
-    end
+    end     # otimes, 9 tests
     
-    @testset "odot" begin
+    @testset "odot" begin # 14 tests
         odot_found_methods = Set(m.sig for m in methods(⊙));
         odot_expected_methods = Set([
             Tuple{typeof(⊙), AbstractArray{<:Number}, Number},
@@ -173,9 +173,9 @@ using Random
 
         @test_throws DimensionMismatch ones(3, 2) ⊙ ones(4)
         @test_throws "x has 3 and y has 4." ones(3, 2) ⊙ ones(4)
-    end
+    end     # odot, 14 tests
     
-    @testset "oslash" begin
+    @testset "oslash" begin # 15 tests
         oslash_found_methods = Set(m.sig for m in methods(⊘));
         oslash_expected_methods = Set([
             Tuple{typeof(⊘), AbstractArray{<:Number}, Number},
@@ -214,9 +214,35 @@ using Random
 
         @test_throws DimensionMismatch ones(3, 2) ⊘ ones(4)
         @test_throws "x has 3 and y has 4." ones(3, 2) ⊘ ones(4)
-    end
+    end     # oslash, 15 tests
+
+    @testset "wedge on wedge" begin # 6 tests
+        wedgeonwedge_found_methods = Set(m.sig for m in methods(⩕));
+        wedgeonwedge_expected_methods = Set([
+            Tuple{typeof(⩕), AbstractArray{<:Number}, Number}
+        ])
+
+        @test wedgeonwedge_expected_methods ⊆ wedgeonwedge_found_methods
+
+        x = [1 2; 3 4]
+        y1 = 2
+        y2 = [2, 3]
+        y3 = [2 3; 4 5]
+
+        @test x ⩕ y1 == [1 4; 9 16]
+
+        # Tuple{typeof(⩕), AbstractArray{<:Number}, AbstractArray{<:Number}}
+        @test_throws MethodError x ⩕ y2
+        @test_throws MethodError x ⩕ y3
+
+        # Tuple{typeof(⩕), Number, AbstractArray{<:Number}}
+        @test_throws MethodError y2 ⩕ x
+
+        # Tuple{typeof(⩕), Number, Number}
+        @test_throws MethodError y1 ⩕ y1
+    end     # wedge on wedge, 6 tests
     
-end
+end              # operators 73 tests
 
 
 

@@ -207,6 +207,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         mhparameters = zeros(Float32, n_eig, n_multi)
         offset = n_multi == 0 ? zeros(Float32, n_eig, n_multi) : zeros(Float32, n_eig)
 
+        Random.seed!(1234);
         return cyclops(deepcopy(mhparameters), deepcopy(mhparameters), offset, Dense(n_eig => n_circ), Dense(n_circ => n_eig))
     end
 

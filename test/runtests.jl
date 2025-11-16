@@ -14,6 +14,10 @@ using Flux
 
                 @testset "hypershpere dimension error" begin # 7 tests
                     @test Exception >: CyclopsHypersphereDimensionError isa DataType
+                    @test Set(m.sig for m in methods(CyclopsHypersphereDimensionError)) ⊆ Set([
+                        Tuple{Type{CyclopsHypersphereDimensionError}, Int},
+                        Tuple{Type{CyclopsHypersphereDimensionError}, Any}
+                    ])
                     @test_throws CyclopsHypersphereDimensionError throw(CyclopsHypersphereDimensionError(1))
                     @test_throws "`c` = 1, but `c` must be ≥ 2." throw(CyclopsHypersphereDimensionError(1))
                     
@@ -28,6 +32,10 @@ using Flux
 
                 @testset "input and hypershpere dimension conflict error" begin # 9 tests
                     @test Exception >: CyclopsInputHypersphereDimensionError isa DataType
+                    @test Set(m.sig for m in methods(CyclopsInputHypersphereDimensionError)) ⊆ Set([
+                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Int, Int},
+                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Any, Any}
+                    ])
                     @test_throws CyclopsInputHypersphereDimensionError throw(CyclopsInputHypersphereDimensionError(2, 2))
                     @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." throw(CyclopsInputHypersphereDimensionError(2, 2))
 
@@ -44,6 +52,10 @@ using Flux
 
                 @testset "multi-hot dimension error" begin # 7 tests
                     @test Exception >: CyclopsMultiHotDimensionError isa DataType
+                    @test Set(m.sig for m in methods(CyclopsMultiHotDimensionError)) ⊆ Set([
+                        Tuple{Type{CyclopsMultiHotDimensionError}, Int},
+                        Tuple{Type{CyclopsMultiHotDimensionError}, Any}
+                    ])
                     @test_throws CyclopsMultiHotDimensionError throw(CyclopsMultiHotDimensionError(-1))
                     @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." throw(CyclopsMultiHotDimensionError(-1))
 
@@ -63,7 +75,9 @@ using Flux
                 # CheckCyclopsInput is a function
                 @test CheckCyclopsInput isa Function
                 # with one method
-                @test methods(CheckCyclopsInput)[1].sig == Tuple{typeof(CheckCyclopsInput), Int, Int, Int}
+                @test Set(m.sig for m in methods(CheckCyclopsInput)) ⊆ Set([
+                    Tuple{typeof(CheckCyclopsInput), Int, Int, Int}
+                ])
                 
                 # It returns nothing when c ≥ 2, n > c, and m ≥ 0
                 @test CheckCyclopsInput(3, 0, 2) isa Nothing
@@ -94,19 +108,15 @@ using Flux
 
             # with 3 explicitly defined constructor function methods
             # 1 method defined by the data type
-            # and one julia internal
-            cyclops_methods = Set([
+            # and one julia internal         
+            @test length(Set(m.sig for m in methods(cyclops))) == 5        # julia sees 5 methods
+            @test Set(m.sig for m in methods(cyclops)) ⊆ Set([
                 Tuple{Type{cyclops}, Int, Int, Int},  # n, m and c are provided as integers
                 Tuple{Type{cyclops}, Int, Int},       # n and m are provided as integers, c = 2
                 Tuple{Type{cyclops}, Int},            # n is provided as an integer, m = 2, c = 2
                 Tuple{Type{cyclops}, Array{Float32}, Array{Float32}, Array{Float32}, Dense, Dense}, # struct
                 Tuple{Type{cyclops}, Vararg{Any, 5}}  # julia default definition
-            ])
-            
-            found_cyclops_methods = Set(m.sig for m in methods(cyclops));
-            
-            @test length(found_cyclops_methods) == 5        # julia sees 5 methods
-            @test cyclops_methods ⊆ found_cyclops_methods   # our expected methods match what julia sees
+            ])   # our expected methods match what julia sees
 
             # the constructor creates a cyclops data type
             @test cyclops(5, 2, 3) isa cyclops
@@ -150,21 +160,23 @@ using Flux
     @testset "function" begin
         
         # A cyclops model has 3 methods
-        expected_cyclops_model_methods = Set([
+        @test Set(m.sig for m in methods(cyclops(5, 3, 2))) ⊆ Set([
             Tuple{cyclops, Vector{Float32}, Vector{Int32}}, # Vector of Float32 and Vector of Int32
             Tuple{cyclops, Vector{Float32}, Missing},       # Vector of Float32 and Missing
             Tuple{cyclops, Vector{Float32}}                 # Vector of Float32
         ])
 
-        @test Set(m.sig for m in methods(cyclops(5, 3, 2))) ⊆ expected_cyclops_model_methods
+        # The output of a cyclops model is a Vector{Float32}
+        @test cyclops(5, 3, 2)(ones(Float32, 5), ones(Int32, 3)) isa Vector{Float32}
+        @test cyclops(5, 0, 2)(ones(Float32, 5)) isa Vector{Float32}
+
+        # A multi-hot model and a standard model will give the same output if:
+        # 1. the multi-hot encoding is all zeros and the :offset vector in the model is all zeros
+        # 2. or no multi-hot encoding is provided as input to a multi-hot model
+        @test cyclops(5, 3, 2)(ones(Float32, 5), zeros(Int32, 3)) == cyclops(5, 3, 2)(ones(Float32, 5), silence=true) == cyclops(5, 0, 2)(ones(Float32, 5))
     end
 
 end
-#   constructor
-#       CheckCyclopsInput
-#           CyclopsHypersphereDimensionError
-#           CyclopsInputHypersphereDimensionError
-#           CyclopsMultiHotDimensionError
 #   function
 #       mhe, mhd
 #           CheckMultiHotTransformation

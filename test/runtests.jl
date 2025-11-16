@@ -1,8 +1,68 @@
 using CYCLOPS
 using Test
 using Random
+using Flux
 
 # cyclops
+@testset "cyclops" begin
+
+    @testset "constructor" begin
+
+        @testset "check cyclops input" begin
+
+            @testset "constructor errors" begin
+
+                @testset "hypershpere dimension error" begin # 7 tests
+                    @test Exception >: CyclopsHypersphereDimensionError isa DataType
+                    @test_throws CyclopsHypersphereDimensionError throw(CyclopsHypersphereDimensionError(1))
+                    @test_throws "`c` = 1, but `c` must be ≥ 2." throw(CyclopsHypersphereDimensionError(1))
+                    
+                    # Alternate methods that will pass because the number can be converted to integers
+                    @test CyclopsHypersphereDimensionError(1f0) isa CyclopsHypersphereDimensionError
+                    @test CyclopsHypersphereDimensionError(1.0) isa CyclopsHypersphereDimensionError
+
+                    # Expected erros
+                    @test_throws InexactError CyclopsHypersphereDimensionError(1.1)
+                    @test_throws MethodError CyclopsHypersphereDimensionError("1")
+                end # 7 tests
+
+                @testset "input and hypershpere dimension conflict error" begin # 9 tests
+                    @test Exception >: CyclopsInputHypersphereDimensionError isa DataType
+                    @test_throws CyclopsInputHypersphereDimensionError throw(CyclopsInputHypersphereDimensionError(2, 2))
+                    @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." throw(CyclopsInputHypersphereDimensionError(2, 2))
+
+                    # Alternate methods that will pass because the number can be converted to integers
+                    @test CyclopsInputHypersphereDimensionError(2f0,2f0) isa CyclopsInputHypersphereDimensionError
+                    @test CyclopsInputHypersphereDimensionError(2.0,2.0) isa CyclopsInputHypersphereDimensionError
+
+                    # Expected errors
+                    @test_throws InexactError CyclopsInputHypersphereDimensionError(1.1, 2)
+                    @test_throws InexactError CyclopsInputHypersphereDimensionError(1, 2.1)
+                    @test_throws MethodError CyclopsInputHypersphereDimensionError("1", 2)
+                    @test_throws MethodError CyclopsInputHypersphereDimensionError(1, "2")
+                end # 9 tests
+
+                @testset "multi-hot dimension error" begin # 7 tests
+                    @test Exception >: CyclopsMultiHotDimensionError isa DataType
+                    @test_throws CyclopsMultiHotDimensionError throw(CyclopsMultiHotDimensionError(-1))
+                    @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." throw(CyclopsMultiHotDimensionError(-1))
+
+                    # Alternate methods that will pass because the number can be converted to integers
+                    @test CyclopsMultiHotDimensionError(-1f0) isa CyclopsMultiHotDimensionError
+                    @test CyclopsMultiHotDimensionError(-1.0) isa CyclopsMultiHotDimensionError
+                    
+                    # Expected errors
+                    @test_throws MethodError CyclopsMultiHotDimensionError("-1f0")
+                    @test_throws InexactError CyclopsMultiHotDimensionError(1.1)
+                end # 7 tests
+
+            end
+
+        end
+
+    end
+
+end
 #   constructor
 #       CheckCyclopsInput
 #           CyclopsHypersphereDimensionError
@@ -18,7 +78,14 @@ using Random
 #               CyclopsHyperSphereDomainError
 #               CyclopsHyperSphereDivideError
 
-# nparams 
+# nparams
+@testset "nparams" begin
+    @test methods(nparams)[1].sig == Tuple{typeof(nparams), cyclops}
+    @test nparams(cyclops(5, 0, 2)) == 27 # n = 5; m = 0; c = 2; 2*n*c + n + c # For standard model
+    @test nparams(cyclops(6, 3, 3)) == 87 # n = 6; m = 3; c = 3; (4*n*m + 2*n + m) # For multi-hot model
+    @test nparams(cyclops(5, 2, 2)) == 52 # n = 5; m = 2; c = 2; (4*n*m + 2*n + m) # For multi-hot model
+    @test_throws MethodError nparams(Flux.Dense(5 => 2)) # Doesn't work on Flux.Dense layer
+end
 
 # ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
 @testset "operators" begin # 73 tests

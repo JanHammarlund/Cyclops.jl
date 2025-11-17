@@ -31,9 +31,14 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     struct CyclopsHypersphereDimensionError <: Exception 
         c::Int
     end
+
+    CyclopsHypersphereDimensionError(c::Number) = begin 
+        throw(ArgumentError("Only integer values are accepted but got: $(typeof(c))."))
+    end
     
-    Base.showerror(io::IO, e::CyclopsHypersphereDimensionError) =
+    Base.showerror(io::IO, e::CyclopsHypersphereDimensionError) = begin
         print(io, "CyclopsHypersphereDimensionError: `c` = $(e.c), but `c` must be ≥ 2.")
+    end
 
     """
         CyclopsInputHypersphereDimensionError(n::Int, c::Int)
@@ -56,8 +61,14 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         c::Int
     end
 
-    Base.showerror(io::IO, e::CyclopsInputHypersphereDimensionError) =
+    CyclopsInputHypersphereDimensionError(n::Number, c::Number) = begin 
+        throw(ArgumentError("Only integer values are accepted but got: $(typeof(n)) and $(typeof(c))."))
+    end
+
+
+    Base.showerror(io::IO, e::CyclopsInputHypersphereDimensionError) = begin
         print(io, "CyclopsInputHypersphereDimensionError: `n` = $(e.n) ≤ `c`, but `n` must be > $(e.c).")
+    end
 
     """
         CyclopsMultiHotDimensionError(m::Int)
@@ -79,8 +90,13 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         m::Int
     end
 
-    Base.showerror(io::IO, e::CyclopsMultiHotDimensionError) =
+    CyclopsMultiHotDimensionError(m::Number) = begin
+        throw(ArgumentError("Only integer values are accepted but got: $(typeof(m))."))
+    end
+
+    Base.showerror(io::IO, e::CyclopsMultiHotDimensionError) = begin
         print(io, "CyclopsMultiHotDimensionError: `m` = $(e.m) < 0, but `m` must be ≥ 0.")
+    end
 
     """
         CheckCyclopsInput(n::Int, m::Int, c::Int)
@@ -111,20 +127,16 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     [...]
     ```
     """
-    function CheckCyclopsInput(n_val::Int, m_val::Int, c_val::Int)
-        c_val ≥ 2 || throw(CyclopsHypersphereDimensionError(c_val))
-        n_val > c_val || throw(CyclopsInputHypersphereDimensionError(n_val, c_val))
-        m_val ≥ 0 || throw(CyclopsMultiHotDimensionError(m_val))
+    function CheckCyclopsInput(n::Int, m::Int, c::Int)
+        c ≥ 2 || throw(CyclopsHypersphereDimensionError(c))
+        n > c || throw(CyclopsInputHypersphereDimensionError(n, c))
+        m ≥ 0 || throw(CyclopsMultiHotDimensionError(m))
 
         return nothing
     end
 
-    struct cyclops
-        scale::Array{Float32}
-        mhoffset::Array{Float32}
-        offset::Union{Vector{Float32}, Array{Float32}}
-        densein::Dense
-        denseout::Dense
+    CheckCyclopsInput(n::Number, m::Number, c::Number) = begin
+        throw(ArgumentError("Only integer values are accepted but got: $(typeof(n)), $(typeof(m)), and $(typeof(c))."))
     end
 
     """
@@ -202,13 +214,72 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     [`CheckCyclopsInput`](@ref), [`CyclopsHypersphereDimensionError`](@ref),
     [`CyclopsInputHypersphereDimensionError`](@ref), [`CyclopsMultiHotDimensionError`](@ref)
     """
-    function cyclops(n_eig::Int, n_multi::Int=0, n_circ::Int=2)        
-        CheckCyclopsInput(n_eig, n_multi, n_circ)
-        mhparameters = zeros(Float32, n_eig, n_multi)
-        offset = n_multi == 0 ? zeros(Float32, n_eig, n_multi) : zeros(Float32, n_eig)
+    struct cyclops
+        scale::Array{Float32}
+        mhoffset::Array{Float32}
+        offset::Union{Vector{Float32}, Array{Float32}}
+        densein::Dense
+        denseout::Dense
 
-        Random.seed!(1234);
-        return cyclops(deepcopy(mhparameters), deepcopy(mhparameters), offset, Dense(n_eig => n_circ), Dense(n_circ => n_eig))
+        function cyclops(n::Int, m::Int=0, c::Int=2)        
+            CheckCyclopsInput(n, m, c)
+            mhparameters = zeros(Float32, n, m)
+            offset = m == 0 ? zeros(Float32, n, m) : zeros(Float32, n)
+
+            Random.seed!(1234);
+            return new(deepcopy(mhparameters), deepcopy(mhparameters), offset, Dense(n => c), Dense(c => n))
+        end
+
+        function cyclops(
+            scale::AbstractArray{<:Real,2},
+            mhoffset::AbstractArray{<:Real,2},
+            offset::AbstractVecOrMat{<:Real},
+            densein::Dense,
+            denseout::Dense)
+
+            scale_size = size(scale)
+            mhoffset_size = size(mhoffset)
+            offset_size = size(offset)
+            offset_size_length = length(offset_size)
+            densein_weight_size = size(densein.weight)
+            denseout_weight_size = size(denseout.weight)
+            densein_bias_size = size(densein.bias)
+            denseout_bias_size = size(denseout.bias)
+
+            # Make sure multi-hot parameters are the same size
+            scale_size == mhoffset_size || throw(DimensionMismatch("scale and mhoffset do not have the same dimensions: scale=$(scale_size) and mhoffset=$(mhoffset_size)."))
+            
+            # Make sure multi-hot parameters have the right number of rows
+            mhoffset_size[1] == offset_size[1] || throw(DimensionMismatch("the number of rows in offset ($(offset_size[1])) doesn't match the number of rows in scale and mhoffset."))
+
+            # Make sure that offset is either a n by 1 or a n by 0 array
+            
+
+            # Make sure dense layers have inverse dimensions
+            densein_weight_size == reverse(denseout_weight_size) || throw(DimensionMismatch("dense layers should have inverse dimensions."))
+            
+            # Make sure dense layers compress/expand to/from ≥ 2 dimensions
+            densein_weight_size[1] ≥ 2 || throw(DomainError(":densein/:denseout", "have smaller dimension $(densein_weight_size[1]), but must be ≥ 2."))
+
+            # Make sure multi-hot parameters 
+
+            # if length(scale_size) == 2 && length(offset_size) == 2
+            #     offset_size[2] == 0 || throw(DimensionMismatch("offset should have 0 columns but has $(offset_size[2])."))
+            # end
+            # scale_size[1] == offset_size[1] || throw(DimensionMismatch("offset should have $(scale_size[1]) rows but has $(offset_size[1]) rows."))
+            # scale_size[1] == densein_weight_size[2] || throw(DimensionMismatch("Dense layer has $(densein_weight_size[2]) columns but should have $(scale_size[1])."))
+            # densein_bias_size[1] == densein_weight_size[1] ≥ 2 || throw(DimensionMismatch("Dense layer has $(densein_weight_size[1]) rows but should have ≥ 2."))
+            # scale_size[1] == denseout_weight_size[1] || throw(DimensionMismatch("Dense layer has $(denseout_weight_size[1]) rows but should have $(scale_size[1])."))
+            # denseout_weight_size[2] ≥ 2 || throw(DimensionMismatch("Dense layer has $(denseout_weight_size[2]) columns but should have ≥ 2."))
+            # densein_weight_size[1] == denseout_weight_size[2] || throw(DimensionMismatch("Dense layers do not have fitting dimensions."))
+            # denseout_bias_size[1] == densein_weight_size[2] == denseout_weight_size[1] || throw(DimensionMismatch("Dense layers do not have fitting dimensions."))
+            # scale_size[1] > densein_weight_size[1] || throw(DomainError("scale", "has $(scale_size[1]) rows but must have > $(densein_weight_size[1])."))
+
+            offset32 = length(offset_size) == 2 ? Array{Float32}(offset) : Vector{Float32}(offset)
+
+            return new(Array{Float32}(scale), Array{Float32}(mhoffset), offset32, densein, denseout)
+        end
+
     end
 
     """

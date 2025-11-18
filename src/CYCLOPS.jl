@@ -1,9 +1,11 @@
 module CYCLOPS
-export cyclops, mhe, hsn, mhd, nparams, ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
+export cyclops, mhe, hsn, mhd, nparams
+export ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
 export CyclopsHypersphereDimensionError
 export CyclopsInputHypersphereDimensionError
 export CyclopsMultiHotDimensionError
 export CheckCyclopsInput
+export _check_cyclops_input
 export CyclopsInputMultiHotDimensionMismatch
 export CyclopsMultiHotParameterDimensionMismatch
 export CheckMultiHotTransformation
@@ -627,6 +629,68 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         
         return input_data ⊙ (1 ⊕ (m.scale ⊗ multihot)) ⊕ (m.mhoffset ⊗ multihot) ⊕ reshape(m.offset, length(input_data))
     end
+    
+    """
+        mhd(x::Vector{Float32}, h::Vector{Int32}, m::cyclops)
+
+    Restores `x` from 'multi-hot'-encoded space.
+
+        (x - m.mhoffset ⊗ h - m.offset) ⊘ (1 + m.scale ⊗ h)
+
+    Inverse of [`mhe`](@ref).
+
+    # Operations
+    - `⊘` is element-wise matrix division
+    - `⊗` is matrix multiplication
+
+    # See also
+    [`cyclops`](@ref), [`mhe`](@ref), [`hsn`](@ref), [`nparams`](@ref), [`Flux.Dense`](@ref)
+
+    # Examples 
+    ```julia-repl
+    julia> using CYCLOPS, Random
+
+    julia> Random.seed!(1234);
+
+    julia> covariate_cyclops_model = cyclops(5,3)
+
+    julia> Random.seed!(1234);
+
+    julia> x = rand(Float32, 5)
+    5-element Vector{Float32}:
+     0.72619927
+     0.32597667
+     0.30699807
+     0.5490511
+     0.7889189
+
+    julia> h = [1, 0, 1];
+
+    julia> mhe_transform = mhe(x, h, covariate_cyclops_model)
+    5-element Vector{Float32}:
+     2.1732361
+     2.2111228
+     2.8991385
+     3.2093358
+     4.121205
+
+    julia> mhd_recovery = mhd(mhe_transform, h, covariate_cyclops_model)
+    5-element Vector{Float32}:
+     0.7261993
+     0.32597664
+     0.30699813
+     0.5490511
+     0.7889189
+
+    julia> isapprox(x, mhd_recovery, atol=1E-6)
+    true
+    ```
+    """
+    function mhd(dense_decoding::Vector{Float32}, multihot::Vector{Int32}, m::cyclops)
+        CheckMultiHotTransformation(dense_decoding, multihot, m.scale)
+
+        return (dense_decoding ⊖ (m.mhoffset ⊗ multihot) ⊖ reshape(m.offset, length(dense_decoding))) ⊘ (1 ⊕ (m.scale ⊗ multihot))
+    end
 
     """
         ⊙(x::Union{Number, AbstractArray{<:Number}}, y::Union{Number, AbstractArray{<:Number}})
@@ -904,67 +968,6 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         return x .^ y
     end
     
-    """
-        mhd(x::Vector{Float32}, h::Vector{Int32}, m::cyclops)
-
-    Restores `x` from 'multi-hot'-encoded space.
-
-        (x - m.mhoffset ⊗ h - m.offset) ⊘ (1 + m.scale ⊗ h)
-
-    Inverse of [`mhe`](@ref).
-
-    # Operations
-    - `⊘` is element-wise matrix division
-    - `⊗` is matrix multiplication
-
-    # See also
-    [`cyclops`](@ref), [`mhe`](@ref), [`hsn`](@ref), [`nparams`](@ref), [`Flux.Dense`](@ref)
-
-    # Examples 
-    ```julia-repl
-    julia> using CYCLOPS, Random
-
-    julia> Random.seed!(1234);
-
-    julia> covariate_cyclops_model = cyclops(5,3)
-
-    julia> Random.seed!(1234);
-
-    julia> x = rand(Float32, 5)
-    5-element Vector{Float32}:
-     0.72619927
-     0.32597667
-     0.30699807
-     0.5490511
-     0.7889189
-
-    julia> h = [1, 0, 1];
-
-    julia> mhe_transform = mhe(x, h, covariate_cyclops_model)
-    5-element Vector{Float32}:
-     2.1732361
-     2.2111228
-     2.8991385
-     3.2093358
-     4.121205
-
-    julia> mhd_recovery = mhd(mhe_transform, h, covariate_cyclops_model)
-    5-element Vector{Float32}:
-     0.7261993
-     0.32597664
-     0.30699813
-     0.5490511
-     0.7889189
-
-    julia> isapprox(x, mhd_recovery, atol=1E-6)
-    true
-    ```
-    """
-    function mhd(dense_decoding::Vector{Float32}, multihot::Vector{Int32}, m::cyclops)
-        CheckMultiHotTransformation(dense_decoding, multihot, m.scale)
-
-        return (dense_decoding ⊖ (m.mhoffset ⊗ multihot) ⊖ reshape(m.offset, length(dense_decoding))) ⊘ (1 ⊕ (m.scale ⊗ multihot))
-    end
 
     Flux.@layer cyclops
 

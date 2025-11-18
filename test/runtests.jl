@@ -10,73 +10,63 @@ using Flux
 
         @testset "check cyclops input" begin
 
-            @testset "constructor errors" begin # 23 tests
+            @testset "constructor errors" begin # 21 tests
 
                 @testset "hypershpere dimension error" begin # 7 tests
                     @test Exception >: CyclopsHypersphereDimensionError isa DataType
                     @test Set(m.sig for m in methods(CyclopsHypersphereDimensionError)) ⊆ Set([
                         Tuple{Type{CyclopsHypersphereDimensionError}, Int},
+                        Tuple{Type{CyclopsHypersphereDimensionError}, Number},
                         Tuple{Type{CyclopsHypersphereDimensionError}, Any}
                     ])
                     @test_throws CyclopsHypersphereDimensionError throw(CyclopsHypersphereDimensionError(1))
                     @test_throws "`c` = 1, but `c` must be ≥ 2." throw(CyclopsHypersphereDimensionError(1))
                     
-                    # Alternate methods that will pass because the number can be converted to integers
-                    @test CyclopsHypersphereDimensionError(1f0) isa CyclopsHypersphereDimensionError
-                    @test CyclopsHypersphereDimensionError(1.0) isa CyclopsHypersphereDimensionError
-
-                    # Expected erros
-                    @test_throws InexactError CyclopsHypersphereDimensionError(1.1)
+                    @test_throws ArgumentError CyclopsHypersphereDimensionError(1f0)
+                    @test_throws "but got: Float32." CyclopsHypersphereDimensionError(1f0)
                     @test_throws MethodError CyclopsHypersphereDimensionError("1")
                 end # 7 tests
 
-                @testset "input and hypershpere dimension conflict error" begin # 9 tests
+                @testset "input and hypershpere dimension conflict error" begin # 7 tests
                     @test Exception >: CyclopsInputHypersphereDimensionError isa DataType
                     @test Set(m.sig for m in methods(CyclopsInputHypersphereDimensionError)) ⊆ Set([
                         Tuple{Type{CyclopsInputHypersphereDimensionError}, Int, Int},
+                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Number, Number},
                         Tuple{Type{CyclopsInputHypersphereDimensionError}, Any, Any}
                     ])
                     @test_throws CyclopsInputHypersphereDimensionError throw(CyclopsInputHypersphereDimensionError(2, 2))
                     @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." throw(CyclopsInputHypersphereDimensionError(2, 2))
 
-                    # Alternate methods that will pass because the number can be converted to integers
-                    @test CyclopsInputHypersphereDimensionError(2f0,2f0) isa CyclopsInputHypersphereDimensionError
-                    @test CyclopsInputHypersphereDimensionError(2.0,2.0) isa CyclopsInputHypersphereDimensionError
-
-                    # Expected errors
-                    @test_throws InexactError CyclopsInputHypersphereDimensionError(1.1, 2)
-                    @test_throws InexactError CyclopsInputHypersphereDimensionError(1, 2.1)
-                    @test_throws MethodError CyclopsInputHypersphereDimensionError("1", 2)
-                    @test_throws MethodError CyclopsInputHypersphereDimensionError(1, "2")
-                end # 9 tests
+                    @test_throws ArgumentError CyclopsInputHypersphereDimensionError(1f0, 1)
+                    @test_throws "got: Float32 and Int64." CyclopsInputHypersphereDimensionError(1f0, 1)
+                    @test_throws MethodError CyclopsInputHypersphereDimensionError("1", 1)
+                end # 7 tests
 
                 @testset "multi-hot dimension error" begin # 7 tests
                     @test Exception >: CyclopsMultiHotDimensionError isa DataType
                     @test Set(m.sig for m in methods(CyclopsMultiHotDimensionError)) ⊆ Set([
                         Tuple{Type{CyclopsMultiHotDimensionError}, Int},
+                        Tuple{Type{CyclopsMultiHotDimensionError}, Number},
                         Tuple{Type{CyclopsMultiHotDimensionError}, Any}
                     ])
                     @test_throws CyclopsMultiHotDimensionError throw(CyclopsMultiHotDimensionError(-1))
                     @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." throw(CyclopsMultiHotDimensionError(-1))
 
-                    # Alternate methods that will pass because the number can be converted to integers
-                    @test CyclopsMultiHotDimensionError(-1f0) isa CyclopsMultiHotDimensionError
-                    @test CyclopsMultiHotDimensionError(-1.0) isa CyclopsMultiHotDimensionError
-                    
-                    # Expected errors
-                    @test_throws MethodError CyclopsMultiHotDimensionError("-1f0")
-                    @test_throws InexactError CyclopsMultiHotDimensionError(1.1)
+                    @test_throws ArgumentError CyclopsMultiHotDimensionError(1f0)
+                    @test_throws "got: Float32." CyclopsMultiHotDimensionError(1f0)
+                    @test_throws MethodError CyclopsMultiHotDimensionError("1")
                 end # 7 tests
 
-            end # 23 tests
+            end # 21 tests
 
-            @testset "wrapper function" begin
+            @testset "wrapper function" begin # 9 tests
                 
                 # CheckCyclopsInput is a function
                 @test CheckCyclopsInput isa Function
                 # with one method
                 @test Set(m.sig for m in methods(CheckCyclopsInput)) ⊆ Set([
-                    Tuple{typeof(CheckCyclopsInput), Int, Int, Int}
+                    Tuple{typeof(CheckCyclopsInput), Int, Int, Int},
+                    Tuple{typeof(CheckCyclopsInput), Number, Number, Number}
                 ])
                 
                 # It returns nothing when c ≥ 2, n > c, and m ≥ 0
@@ -96,7 +86,7 @@ using Flux
                 @test_throws CyclopsInputHypersphereDimensionError CheckCyclopsInput(2, 0, 2)
                 # and provides the value of both n and c, as well as the non-error domain, n > c
                 @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." CheckCyclopsInput(2, 0, 2)
-            end
+            end # 9 tests
 
         end
 

@@ -578,7 +578,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     - Both methods for covariate model
     - Only one method for non-covariate model
     """
-    function (m::cyclops)(input_data::Vector{Float32}, multihot::Vector{Int32}=missing; silence::Bool=false)::Array{Float32}
+    function (m::cyclops)(input_data::Vector{Float32}, multihot::Vector{Int32}; silence::Bool=false)::Array{Float32}
         length(m.scale) == 0 && throw(ErrorException("Multi-hot encoding provided to model without multi-hot parameters."))
         multihot_encoding = mhe(input_data, multihot, m)
         dense_encoding = m.densein(multihot_encoding)
@@ -588,7 +588,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
         return output
     end
 
-    function (m::cyclops)(input_data::Vector{Float32}, multihot::Missing; silence::Bool=false)::Array{Float32}
+    function (m::cyclops)(input_data::Vector{Float32}, multihot::Missing=missing; silence::Bool=false)::Array{Float32}
         silence || length(m.scale) == 0 || @warn "CYCLOPS model with multi-hot parameters used without multi-hot encoding."
         dense_encoding = m.densein(input_data)
         circular_encoding = hsn(dense_encoding)

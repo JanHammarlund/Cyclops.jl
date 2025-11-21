@@ -3,333 +3,182 @@ using Test
 using Random
 using Flux
 
-# CyclopsHypersphereDimensionError
-@testset "hypershpere dimension error" begin # 7 tests
-    @test Exception >: CyclopsHypersphereDimensionError isa DataType
-    @test Set(m.sig for m in methods(CyclopsHypersphereDimensionError)) ⊆ Set([
-        Tuple{Type{CyclopsHypersphereDimensionError}, Int},
-        Tuple{Type{CyclopsHypersphereDimensionError}, Number},
-        Tuple{Type{CyclopsHypersphereDimensionError}, Any}
-    ])
+@testset "Cyclops Error Hierarchy" begin
+    cyclops_error_hierarchy = Dict(
+        CyclopsError => [
+            CyclopsConstructorError,
+            CyclopsFunctionError
+        ],
+        CyclopsConstructorError => [
+            CyclopsConstructorDomainError,
+            CyclopsConstructorShapeError
+        ],
+        CyclopsConstructorDomainError => [
+            CyclopsConstructorHypersphereDomainError,
+            CyclopsConstructorInputAndHypersphereDomainError,
+            CyclopsConstructorMultiHotDomainError
+        ],
+        CyclopsConstructorShapeError => [
+            CyclopsMultiHotParameterShapeError,
+            CyclopsDenseShapeError
+        ],
+        CyclopsMultiHotParameterShapeError => [
+            CyclopsMultiHotMatrixShapeError,
+            CyclopsMultiHotOffsetShapeError
+        ],
+        CyclopsDenseShapeError => [
+            CyclopsDenseDimensionError,
+            CyclopsInverseDimensionMismatch
+        ],
+        CyclopsDenseDimensionError => [
+            CyclopsDenseCompressionDimensionError,
+            CyclopsDenseExpansionDimensionError
+        ],
+        CyclopsFunctionError => [
+            CyclopsMethodError,
+            CyclopsMultiHotError,
+            CyclopsHSNError
+        ],
+        CyclopsMultiHotError => [
+            CyclopsInputDimensionMismatch,
+            CyclopsMultiHotDimensionMismatch
+        ],
+        CyclopsHSNError => [
+            CyclopsHyperSphereDomainError,
+            CyclopsHyperSphereDivideError
+        ]
+    )
 
-    @test_throws CyclopsHypersphereDimensionError throw(CyclopsHypersphereDimensionError(1))
-    @test_throws "`c` = 1, but `c` must be ≥ 2." throw(CyclopsHypersphereDimensionError(1))
-
-    @test_throws ArgumentError CyclopsHypersphereDimensionError(1f0)
-    @test_throws "but got: Float32." CyclopsHypersphereDimensionError(1f0)
-    @test_throws MethodError CyclopsHypersphereDimensionError("1")
-end
-
-# CyclopsInputHypersphereDimensionError
-@testset "input and hypershpere dimension conflict error" begin # 7 tests
-    @test Exception >: CyclopsInputHypersphereDimensionError isa DataType
-    @test Set(m.sig for m in methods(CyclopsInputHypersphereDimensionError)) ⊆ Set([
-        Tuple{Type{CyclopsInputHypersphereDimensionError}, Int, Int},
-        Tuple{Type{CyclopsInputHypersphereDimensionError}, Number, Number},
-        Tuple{Type{CyclopsInputHypersphereDimensionError}, Any, Any}
-    ])
-    @test_throws CyclopsInputHypersphereDimensionError throw(CyclopsInputHypersphereDimensionError(2, 2))
-    @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." throw(CyclopsInputHypersphereDimensionError(2, 2))
-
-    @test_throws ArgumentError CyclopsInputHypersphereDimensionError(1f0, 1)
-    @test_throws "got: Float32 and Int64." CyclopsInputHypersphereDimensionError(1f0, 1)
-    @test_throws MethodError CyclopsInputHypersphereDimensionError("1", 1)
-end
-
-# CyclopsMultiHotDimensionError
-@testset "multi-hot dimension error" begin # 7 tests
-    @test Exception >: CyclopsMultiHotDimensionError isa DataType
-    @test Set(m.sig for m in methods(CyclopsMultiHotDimensionError)) ⊆ Set([
-        Tuple{Type{CyclopsMultiHotDimensionError}, Int},
-        Tuple{Type{CyclopsMultiHotDimensionError}, Number},
-        Tuple{Type{CyclopsMultiHotDimensionError}, Any}
-    ])
-    @test_throws CyclopsMultiHotDimensionError throw(CyclopsMultiHotDimensionError(-1))
-    @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." throw(CyclopsMultiHotDimensionError(-1))
-
-    @test_throws ArgumentError CyclopsMultiHotDimensionError(1f0)
-    @test_throws "got: Float32." CyclopsMultiHotDimensionError(1f0)
-    @test_throws MethodError CyclopsMultiHotDimensionError("1")
-end
-
-# CheckCyclopsInput
-@testset "inner constructor method 1 check" begin
-
-    # CheckCyclopsInput is a function
-    @test CheckCyclopsInput isa Function
-    # with one method
-    @test Set(m.sig for m in methods(CheckCyclopsInput)) ⊆ Set([
-        Tuple{typeof(CheckCyclopsInput), Int, Int, Int},
-        Tuple{typeof(CheckCyclopsInput), Number, Number, Number}
-    ])
-
-    # It returns nothing when c ≥ 2, n > c, and m ≥ 0
-    @test CheckCyclopsInput(3, 0, 2) isa Nothing
-
-    # When m < 0 the function throws a CyclopsMultiHotDimensionError
-    @test_throws CyclopsMultiHotDimensionError CheckCyclopsInput(5, -1, 2)
-    # and provides the value of m, as well as the non-error domain, m ≥ 0
-    @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." CheckCyclopsInput(5, -1, 2)
-
-    # When c < 2 the function throws a CyclopsHyperSphereDomainError
-    @test_throws CyclopsHypersphereDimensionError CheckCyclopsInput(5, 0, 1)
-    # and provides the value of c, as well as the non-error domain, c ≥ 2
-    @test_throws "`c` = 1, but `c` must be ≥ 2." CheckCyclopsInput(5, 0, 1)
-
-    # When n ≤ c the function throws a CyclopsInputHypersphereDimensionError
-    @test_throws CyclopsInputHypersphereDimensionError CheckCyclopsInput(2, 0, 2)
-    # and provides the value of both n and c, as well as the non-error domain, n > c
-    @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." CheckCyclopsInput(2, 0, 2)
-end
-
-# _check_cyclops_input
-# cyclops
-# CyclopsHyperSphereDomainError
-# CyclopsHyperSphereDivideError
-# CheckHSNdomain
-# hsn
-# CyclopsInputMultiHotDimensionMismatch
-# CyclopsMultiHotParameterDimensionMismatch
-# CheckMultiHotTransformation
-# mhe
-# mhd
-# ⊙
-# ⊗
-# ⊕
-# ⊖
-# ⊘
-# ⩕
-# nparams
-
-# cyclops
-@testset "cyclops" begin
-
-    @testset "constructor" begin
-
-        @testset "check cyclops input" begin
-
-            @testset "constructor errors" begin # 21 tests
-
-                @testset "hypershpere dimension error" begin # 7 tests
-                    @test Exception >: CyclopsHypersphereDimensionError isa DataType
-                    @test Set(m.sig for m in methods(CyclopsHypersphereDimensionError)) ⊆ Set([
-                        Tuple{Type{CyclopsHypersphereDimensionError}, Int},
-                        Tuple{Type{CyclopsHypersphereDimensionError}, Number},
-                        Tuple{Type{CyclopsHypersphereDimensionError}, Any}
-                    ])
-
-                    @test_throws CyclopsHypersphereDimensionError throw(CyclopsHypersphereDimensionError(1))
-                    @test_throws "`c` = 1, but `c` must be ≥ 2." throw(CyclopsHypersphereDimensionError(1))
-                    
-                    @test_throws ArgumentError CyclopsHypersphereDimensionError(1f0)
-                    @test_throws "but got: Float32." CyclopsHypersphereDimensionError(1f0)
-                    @test_throws MethodError CyclopsHypersphereDimensionError("1")
-                end # 7 tests
-
-                @testset "input and hypershpere dimension conflict error" begin # 7 tests
-                    @test Exception >: CyclopsInputHypersphereDimensionError isa DataType
-                    @test Set(m.sig for m in methods(CyclopsInputHypersphereDimensionError)) ⊆ Set([
-                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Int, Int},
-                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Number, Number},
-                        Tuple{Type{CyclopsInputHypersphereDimensionError}, Any, Any}
-                    ])
-                    @test_throws CyclopsInputHypersphereDimensionError throw(CyclopsInputHypersphereDimensionError(2, 2))
-                    @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." throw(CyclopsInputHypersphereDimensionError(2, 2))
-
-                    @test_throws ArgumentError CyclopsInputHypersphereDimensionError(1f0, 1)
-                    @test_throws "got: Float32 and Int64." CyclopsInputHypersphereDimensionError(1f0, 1)
-                    @test_throws MethodError CyclopsInputHypersphereDimensionError("1", 1)
-                end # 7 tests
-
-                @testset "multi-hot dimension error" begin # 7 tests
-                    @test Exception >: CyclopsMultiHotDimensionError isa DataType
-                    @test Set(m.sig for m in methods(CyclopsMultiHotDimensionError)) ⊆ Set([
-                        Tuple{Type{CyclopsMultiHotDimensionError}, Int},
-                        Tuple{Type{CyclopsMultiHotDimensionError}, Number},
-                        Tuple{Type{CyclopsMultiHotDimensionError}, Any}
-                    ])
-                    @test_throws CyclopsMultiHotDimensionError throw(CyclopsMultiHotDimensionError(-1))
-                    @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." throw(CyclopsMultiHotDimensionError(-1))
-
-                    @test_throws ArgumentError CyclopsMultiHotDimensionError(1f0)
-                    @test_throws "got: Float32." CyclopsMultiHotDimensionError(1f0)
-                    @test_throws MethodError CyclopsMultiHotDimensionError("1")
-                end # 7 tests
-
-            end # 21 tests
-
-            @testset "inner constructor method 1 check" begin
-                
-                # CheckCyclopsInput is a function
-                @test CheckCyclopsInput isa Function
-                # with one method
-                @test Set(m.sig for m in methods(CheckCyclopsInput)) ⊆ Set([
-                    Tuple{typeof(CheckCyclopsInput), Int, Int, Int},
-                    Tuple{typeof(CheckCyclopsInput), Number, Number, Number}
-                ])
-                
-                # It returns nothing when c ≥ 2, n > c, and m ≥ 0
-                @test CheckCyclopsInput(3, 0, 2) isa Nothing
-                
-                # When m < 0 the function throws a CyclopsMultiHotDimensionError
-                @test_throws CyclopsMultiHotDimensionError CheckCyclopsInput(5, -1, 2)
-                # and provides the value of m, as well as the non-error domain, m ≥ 0
-                @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." CheckCyclopsInput(5, -1, 2)
-                
-                # When c < 2 the function throws a CyclopsHyperSphereDomainError
-                @test_throws CyclopsHypersphereDimensionError CheckCyclopsInput(5, 0, 1)
-                # and provides the value of c, as well as the non-error domain, c ≥ 2
-                @test_throws "`c` = 1, but `c` must be ≥ 2." CheckCyclopsInput(5, 0, 1)
-                
-                # When n ≤ c the function throws a CyclopsInputHypersphereDimensionError
-                @test_throws CyclopsInputHypersphereDimensionError CheckCyclopsInput(2, 0, 2)
-                # and provides the value of both n and c, as well as the non-error domain, n > c
-                @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." CheckCyclopsInput(2, 0, 2)
-            end
-
-            @testset "inner constructor method 2" begin
-                
-                # CheckCyclopsInput is a function
-                @test CheckCyclopsInput isa Function
-                # with one method
-                @test Set(m.sig for m in methods(CheckCyclopsInput)) ⊆ Set([
-                    Tuple{typeof(CheckCyclopsInput), Int, Int, Int},
-                    Tuple{typeof(CheckCyclopsInput), Number, Number, Number}
-                ])
-                
-                # It returns nothing when c ≥ 2, n > c, and m ≥ 0
-                @test CheckCyclopsInput(3, 0, 2) isa Nothing
-                
-                # When m < 0 the function throws a CyclopsMultiHotDimensionError
-                @test_throws CyclopsMultiHotDimensionError CheckCyclopsInput(5, -1, 2)
-                # and provides the value of m, as well as the non-error domain, m ≥ 0
-                @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." CheckCyclopsInput(5, -1, 2)
-                
-                # When c < 2 the function throws a CyclopsHyperSphereDomainError
-                @test_throws CyclopsHypersphereDimensionError CheckCyclopsInput(5, 0, 1)
-                # and provides the value of c, as well as the non-error domain, c ≥ 2
-                @test_throws "`c` = 1, but `c` must be ≥ 2." CheckCyclopsInput(5, 0, 1)
-                
-                # When n ≤ c the function throws a CyclopsInputHypersphereDimensionError
-                @test_throws CyclopsInputHypersphereDimensionError CheckCyclopsInput(2, 0, 2)
-                # and provides the value of both n and c, as well as the non-error domain, n > c
-                @test_throws "`n` = 2 ≤ `c`, but `n` must be > 2." CheckCyclopsInput(2, 0, 2)
-            end
-
-        end
-
-        @testset "data type" begin
-            # cyclops is a data type
-            @test cyclops isa DataType
-            # with fieldnames: scale, mhoffset, offset, densein, and denseout
-            @test Set(fieldnames(cyclops)) ⊆ Set([:scale, :mhoffset, :offset, :densein, :denseout])
-
-            # with 3 explicitly defined constructor function methods
-            # 1 method defined by the data type
-            # and one julia internal         
-            @test length(Set(m.sig for m in methods(cyclops))) == 5        # julia sees 5 methods
-            @test Set(m.sig for m in methods(cyclops)) ⊆ Set([
-                Tuple{Type{cyclops}, Int, Int, Int},  # n, m and c are provided as integers
-                Tuple{Type{cyclops}, Int, Int},       # n and m are provided as integers, c = 2
-                Tuple{Type{cyclops}, Int},            # n is provided as an integer, m = 2, c = 2
-                Tuple{Type{cyclops}, Array{Float32}, Array{Float32}, Array{Float32}, Dense, Dense}, # struct
-                Tuple{Type{cyclops}, Vararg{Any, 5}}  # julia default definition
-            ])   # our expected methods match what julia sees
-
-            # the constructor creates a cyclops data type
-            @test cyclops(5, 2, 3) isa cyclops
-            for ii in [:scale, :mhoffset] # scale and mhoffset have the same dimensions
-                @test getfield(cyclops(5, 2, 3), ii) isa Array{Float32}
-                @test getfield(cyclops(5, 2, 3), ii) |> size == (5, 2)
-            end
-
-            # offset is a n = 5 by 1 Vector{Float32}
-            @test getfield(cyclops(5, 2, 3), :offset) isa Vector{Float32}
-            @test getfield(cyclops(5, 2, 3), :offset) |> size == (5,)
-
-            # densein and denseout both have weight and bias field names
-            for ii in [:densein, :denseout]
-                @test getfield(cyclops(5, 2, 3), ii) |> x -> getfield(x, :weight) isa Array{Float32}
-                @test getfield(cyclops(5, 2, 3), ii) |> x -> getfield(x, :bias) isa Vector{Float32}
-            end
-
-            # densein weight has dimensions c = 3 by n = 5
-            @test getfield(cyclops(5, 2, 3), :densein) |> x -> getfield(x, :weight) |> size == (3, 5)
-            # and densein bias is a c = 3 by 1 Vector{Float32}
-            @test getfield(cyclops(5, 2, 3), :densein) |> x -> getfield(x, :bias) |> size == (3,)
-            
-            # denseout weight has dimensions n = 5 by c = 3
-            @test getfield(cyclops(5, 2, 3), :denseout) |> x -> getfield(x, :weight) |> size == (5, 3)
-            # and denseout bias is a n = 5 by 1 Vector{Float32}
-            @test getfield(cyclops(5, 2, 3), :denseout) |> x -> getfield(x, :bias) |> size == (5,)
-        end
-
-        @testset "errors" begin
-            # when c < 2 a CyclopsHypersphereDimensionError is thrown
-            @test_throws CyclopsHypersphereDimensionError cyclops(5, 0, 1)
-            # when n ≤ c a CyclopsInputHypersphereDimensionError is thrown
-            @test_throws CyclopsInputHypersphereDimensionError cyclops(2, 0, 2)
-            # when m < 0 a CyclopsMultiHotDimensionError is thrown
-            @test_throws CyclopsMultiHotDimensionError cyclops(5, -1, 2)
-        end
-
+    # Each parent’s current subtypes must be drawn from the expected set.
+    for (parent, children) in cyclops_error_hierarchy
+        @test Set(subtypes(parent)) ⊆ Set(children)
     end
 
-    @testset "function" begin
+    concrete_errors = [
+        CyclopsConstructorHypersphereDomainError,
+        CyclopsConstructorInputAndHypersphereDomainError,
+        CyclopsConstructorMultiHotDomainError,
+        CyclopsMultiHotMatrixShapeError,
+        CyclopsMultiHotOffsetShapeError,
+        CyclopsDenseCompressionDimensionError,
+        CyclopsDenseExpansionDimensionError,
+        CyclopsInverseDimensionMismatch,
+        CyclopsMethodError,
+        CyclopsInputDimensionMismatch,
+        CyclopsMultiHotDimensionMismatch,
+        CyclopsHyperSphereDomainError,
+        CyclopsHyperSphereDivideError
+    ]
+
+    for T in concrete_errors
+        @test !isabstracttype(T)
+    end
+
+end
+
+@testset "Expected Errors" begin
+    
+    @testset "Constructor Errors" begin
         
-        # A cyclops model has 3 methods
-        @test Set(m.sig for m in methods(cyclops(5, 3, 2))) ⊆ Set([
-            Tuple{cyclops, Vector{Float32}, Vector{Int32}}, # Vector of Float32 and Vector of Int32
-            Tuple{cyclops, Vector{Float32}, Missing},       # Vector of Float32 and Missing
-            Tuple{cyclops, Vector{Float32}}                 # Vector of Float32
-        ])
-
-        @testset "check cyclops model input" begin
-
-            @testset "function errors" begin
-                
-                @testset "input and model parameter dimension mismatch" begin
-                    @test Exception >: CyclopsInputMultiHotDimensionMismatch isa DataType
-                    @test Set(m.sig for m in methods(CyclopsInputMultiHotDimensionMismatch)) ⊆ Set([
-                        Tuple{Type{CyclopsInputMultiHotDimensionMismatch}, Vector{Float32}, Array{Float32}},
-                        Tuple{Type{CyclopsInputMultiHotDimensionMismatch}, Any, Any}
-                    ])
-
-                    @test_throws CyclopsInputMultiHotDimensionMismatch throw(CyclopsInputMultiHotDimensionMismatch(ones(Float32, 5), zeros(Float32, 6, 2)))
-                    @test_throws "Input = 5 ≠ 6 = Multi-hot Parameters" throw(CyclopsInputMultiHotDimensionMismatch(ones(Float32, 5), zeros(Float32, 6, 2)))
-                    
-                    # # Alternate methods that will pass because the number can be converted to integers
-                    # @test CyclopsHypersphereDimensionError(1f0) isa CyclopsHypersphereDimensionError
-                    # @test CyclopsHypersphereDimensionError(1.0) isa CyclopsHypersphereDimensionError
-
-                    # # Expected erros
-                    # @test_throws InexactError CyclopsHypersphereDimensionError(1.1)
-                    # @test_throws MethodError CyclopsHypersphereDimensionError("1")
-                end
+        @testset "Constructor Domain Errors" begin
+            # Method one for creating a variable::cyclops
+            # Using the method cyclops(n::Int[, m::Int=0, c::Int=2])
+            # For this method to work
+            # 1) c ≥ 2
+            @testset "Hypersphere Domain Error" begin
+                @test CyclopsConstructorHypersphereDomainError isa DataType
+                @test_throws CyclopsConstructorHypersphereDomainError cyclops(5, 0, 1)
+                @test_throws "`c` = 1, but `c` must be ≥ 2." cyclops(5, 0, 1)
             end
-
+            # 2) n > c
+            @testset "Input and Hypersphere Domain Error" begin
+                @test CyclopsConstructorInputAndHypersphereDomainError isa DataType
+                @test_throws CyclopsConstructorInputAndHypersphereDomainError cyclops(5, 0, 6)
+                @test_throws "`n` = 5 ≤ `c`, but `n` must be > 6." cyclops(5, 0, 6)
+            end
+            # 3) m ≥ 0
+            @testset "Multi-hot Domain Error" begin
+                @test CyclopsConstructorMultiHotDomainError isa DataType
+                @test_throws CyclopsConstructorMultiHotDomainError cyclops(5, -1, 3)
+                @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." cyclops(5, -1, 3)
+            end
+            # These errors are obvious.
         end
 
-        # The output of a cyclops model is a Vector{Float32}
-        @test cyclops(5, 3, 2)(ones(Float32, 5), ones(Int32, 3)) isa Vector{Float32}
-        @test cyclops(5, 0, 2)(ones(Float32, 5)) isa Vector{Float32}
+        @testset "Constructor Shape Errors" begin
+            # Method two for creating variable::cyclops
+            # Using the method cyclops(scale::Array{Float32}, mhoffset::Array{Float32}, offset::AbstractVecOrMat{Float32}, densein::Dense, denseout::Dense)
+            # For this method to work multihot parameters need to have specific dimensions
+            # scale is n x m
+            # mhoffset is n x m
+            # offset is n x 1 (or n x 0 if scale and mhoffset are n x 0)
+            @testset "Multi-hot Parameter Shape Error" begin
+                # When scale and mhoffset do not have the same dimensions
+                @testset "Multi-hot Matrix Shape Error" begin
+                    @test CyclopsMultiHotMatrixShapeError isa DataType
+                    @test_throws CyclopsMultiHotMatrixShapeError cyclops(rand(Float32, 5, 3), rand(Float32, 6, 4), rand(Float32, 5), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws "scale has dimensions (5, 3) ≠ (6, 4) dimensions of mhoffset." cyclops(rand(Float32, 5, 3), rand(Float32, 6, 4), rand(Float32, 5), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                end
+                # When offset has the wrong number of rows
+                # Or when offset has the wrong number of columns
+                # If scale and mhoffset are n x 0, then offset must be n x 0 as well
+                # If scale and mhoffset are n x m, where m ≥ 1, then offset must be n x 1.
+                @testset "Multi-hot Offset Shape Error" begin
+                    @test CyclopsMultiHotOffsetShapeError isa DataType
+                    @test_throws CyclopsMultiHotOffsetShapeError cyclops(rand(Float32, 5, 3), rand(Float32, 5, 3), rand(Float32, 6), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws "expected dimensions (5,), but got (6,)." cyclops(rand(Float32, 5, 3), rand(Float32, 5, 3), rand(Float32, 6), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws CyclopsMultiHotOffsetShapeError cyclops(rand(Float32, 5, 3), rand(Float32, 5, 3), rand(Float32, 5, 1), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws "expected dimensions (5,), but got (5, 1)." cyclops(rand(Float32, 5, 3), rand(Float32, 5, 3), rand(Float32, 5, 1), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws CyclopsMultiHotOffsetShapeError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), zeros(Float32, 5), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                    @test_throws "expected dimensions (5, 0), but got (5,)." cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), zeros(Float32, 5), Flux.Dense(5 => 2), Flux.Dense(2 => 5))
+                end
 
-        # A multi-hot model and a standard model will give the same output if:
-        # 1. the multi-hot encoding is all zeros and the :offset vector in the model is all zeros
-        # 2. or no multi-hot encoding is provided as input to a multi-hot model
-        @test cyclops(5, 3, 2)(ones(Float32, 5), zeros(Int32, 3)) == cyclops(5, 3, 2)(ones(Float32, 5), silence=true) == cyclops(5, 0, 2)(ones(Float32, 5))
+            end
+            # Accordingly, the dense layers need to have appropriate dimensions as well
+            # densein has dimensions n => c
+            # denseout has dimensions c => n
+            @testset "Dense Shape Error" begin
+
+                @testset "Dense Dimension Error" begin
+
+                    @testset "Dense Compression Error" begin
+                        @test CyclopsDenseCompressionDimensionError isa DataType
+                        # The first dimension must be the smaller dimension
+                        @test_throws CyclopsDenseCompressionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(3 => 4), Flux.Dense(2 => 5))
+                        # The first dimension must be ≥ 2
+                        @test_throws CyclopsDenseCompressionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(5 => 1), Flux.Dense(2 => 5))
+                        # The second dimension must match the first dimension of scale, mhoffet and offset
+                        @test_throws CyclopsDenseCompressionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(6 => 1), Flux.Dense(2 => 5))
+                    end
+
+                    @testset "Dense Expansion Error" begin
+                        @test CyclopsDenseExpansionDimensionError isa DataType
+                        # The second dimension must be the smaller dimension
+                        @test_throws CyclopsDenseExpansionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(5 => 2), Flux.Dense(4 => 3))
+                        # The second dimension must by ≥ 2
+                        @test_throws CyclopsDenseExpansionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(5 => 2), Flux.Dense(1 => 5))    
+                        # The first dimension must match the first dimension of scale, mhoffset and offset
+                        @test_throws CyclopsDenseExpansionDimensionError cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(5 => 2), Flux.Dense(2 => 6))    
+                    end
+
+                end
+
+                @testset "Inverse Dimension Error" begin
+                    @test CyclopsInverseDimensionMismatch isa DataType
+                    # densein and denseout must have inverse dimensions
+                    @test_throws CyclopsInverseDimensionMismatch cyclops(rand(Float32, 5, 0), rand(Float32, 5, 0), rand(Float32, 5, 0), Flux.Dense(5 => 2), Flux.Dense(3 => 5))
+                end
+                
+            end
+        end
+
+    end
+
+    @testset "Function Errors" begin
+        
     end
 
 end
-#   function
-#       mhe, mhd
-#           CheckMultiHotTransformation
-#               CyclopsInputMultiHotDimensionMismatch
-#               CyclopsMultiHotParameterDimensionMismatch
-#       hsn
-#           CheckHSNdomain
-#               CyclopsHyperSphereDomainError
-#               CyclopsHyperSphereDivideError
 
 # nparams
 @testset "nparams" begin

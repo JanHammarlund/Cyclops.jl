@@ -19,7 +19,7 @@ using InteractiveUtils: subtypes
         CyclopsConstructorDomainError => [
             CyclopsConstructorHypersphereDomainError,
             CyclopsConstructorInputAndHypersphereDomainError,
-            CyclopsConstructorMultiHotDomainError
+            CyclopsConstructorMultihotDomainError
         ],
         CyclopsConstructorShapeError => [
             CyclopsMultiHotParameterShapeError,
@@ -59,7 +59,7 @@ using InteractiveUtils: subtypes
     concrete_errors = [
         CyclopsConstructorHypersphereDomainError,
         CyclopsConstructorInputAndHypersphereDomainError,
-        CyclopsConstructorMultiHotDomainError,
+        CyclopsConstructorMultihotDomainError,
         CyclopsMultiHotMatrixShapeError,
         CyclopsMultiHotOffsetShapeError,
         CyclopsDenseCompressionDimensionError,
@@ -73,9 +73,9 @@ using InteractiveUtils: subtypes
 
     for T in concrete_errors
         @test !isabstracttype(T)
-    end # 13 concrete types, 13 tests
+    end # 12 concrete types, 12 tests
 
-end # 23 tests
+end # 22 tests
 
 @testset "Expected Errors" begin
     
@@ -100,8 +100,8 @@ end # 23 tests
             end # 3 tests
             # 3) m ≥ 0
             @testset "Multi-hot Domain Error" begin
-                @test CyclopsConstructorMultiHotDomainError isa DataType
-                @test_throws CyclopsConstructorMultiHotDomainError cyclops(5, -1, 3)
+                @test CyclopsConstructorMultihotDomainError isa DataType
+                @test_throws CyclopsConstructorMultihotDomainError cyclops(5, -1, 3)
                 @test_throws "`m` = -1 < 0, but `m` must be ≥ 0." cyclops(5, -1, 3)
             end # 3 tests
             
@@ -202,7 +202,7 @@ end # 23 tests
 
     end
 
-end
+end # 42 tests
 
 # nparams
 @testset "nparams" begin

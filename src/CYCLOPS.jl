@@ -1,4 +1,10 @@
 module CYCLOPS
+
+include("CyclopsErrors.jl")
+include("CyclopsConstructors.jl")
+include("CyclopsOperators.jl")
+include("CyclopsOverload.jl")
+
 export cyclops, mhe, hsn, mhd, nparams
 export ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
 export CyclopsError
@@ -11,7 +17,7 @@ export CyclopsInputDimensionMismatch
 export CyclopsBottleneckError
 export CyclopsConstructorHypersphereDomainError
 export CyclopsConstructorInputAndHypersphereDomainError
-export CyclopsConstructorMultiHotDomainError
+export CyclopsConstructorMultihotDomainError
 export CyclopsMultiHotParameterShapeError
 export CyclopsDenseShapeError
 export CyclopsDimensionMismatch
@@ -28,154 +34,154 @@ export CheckCyclopsInput
 export CheckHSNdomain
 using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
 
-    # Cyclops Error
-    """
-    ```text
-    CyclopsError
-    │
-    ├── CyclopsConstructorError
-    │     │
-    │     ├── CyclopsConstructorDomainError
-    │     │      ├── CyclopsConstructorHypersphereDomainError
-    │     │      ├── CyclopsConstructorInputAndHypersphereDomainError
-    │     │      └── CyclopsConstructorMultiHotDomainError
-    │     │
-    │     └── CyclopsConstructorShapeError
-    │            ├── CyclopsMultiHotParameterShapeError
-    │            │      ├── CyclopsMultiHotMatrixShapeError
-    │            │      └── CyclopsMultiHotOffsetShapeError
-    │            │
-    │            └── CyclopsDenseShapeError
-    │                   ├── CyclopsDenseDimensionError
-    │                   │      └── CyclopsDenseCompressionDimensionError
-    │                   │
-    │                   └── CyclopsInverseDimensionMismatch
-    │
-    └── CyclopsFunctionError
-           │
-           ├── CyclopsInputDimensionMismatch
-           │      ├── CyclopsDimensionMismatch
-           │      └── CyclopsMultiHotDimensionMismatch
-           │
-           ├── CyclopsBottleneckError
-           │      ├── CyclopsHypersphereDomainError
-           │      └── CyclopsHypersphereDivideError
-           │
-           └── CyclopsMethodError
-    ```
-    """
-    abstract type   CyclopsError                        <:  Exception                       end
+    # # Cyclops Error
+    # """
+    # ```text
+    # CyclopsError
+    # │
+    # ├── CyclopsConstructorError
+    # │     │
+    # │     ├── CyclopsConstructorDomainError
+    # │     │      ├── CyclopsConstructorHypersphereDomainError
+    # │     │      ├── CyclopsConstructorInputAndHypersphereDomainError
+    # │     │      └── CyclopsConstructorMultihotDomainError
+    # │     │
+    # │     └── CyclopsConstructorShapeError
+    # │            ├── CyclopsMultiHotParameterShapeError
+    # │            │      ├── CyclopsMultiHotMatrixShapeError
+    # │            │      └── CyclopsMultiHotOffsetShapeError
+    # │            │
+    # │            └── CyclopsDenseShapeError
+    # │                   ├── CyclopsDenseDimensionError
+    # │                   │      └── CyclopsDenseCompressionDimensionError
+    # │                   │
+    # │                   └── CyclopsInverseDimensionMismatch
+    # │
+    # └── CyclopsFunctionError
+    #        │
+    #        ├── CyclopsInputDimensionMismatch
+    #        │      ├── CyclopsDimensionMismatch
+    #        │      └── CyclopsMultiHotDimensionMismatch
+    #        │
+    #        ├── CyclopsBottleneckError
+    #        │      ├── CyclopsHypersphereDomainError
+    #        │      └── CyclopsHypersphereDivideError
+    #        │
+    #        └── CyclopsMethodError
+    # ```
+    # """
+    # abstract type   CyclopsError                        <:  Exception                       end
 
-    # Constructor Errors
-    abstract type   CyclopsConstructorError             <:  CyclopsError                    end
-    abstract type   CyclopsConstructorDomainError       <:  CyclopsConstructorError         end
-    #                  ├── CyclopsConstructorHypersphereDomainError
-    #                  ├── CyclopsConstructorInputAndHypersphereDomainError
-    #                  └── CyclopsConstructorMultiHotDomainError
+    # # Constructor Errors
+    # abstract type   CyclopsConstructorError             <:  CyclopsError                    end
+    # abstract type   CyclopsConstructorDomainError       <:  CyclopsConstructorError         end
+    # #                  ├── CyclopsConstructorHypersphereDomainError
+    # #                  ├── CyclopsConstructorInputAndHypersphereDomainError
+    # #                  └── CyclopsConstructorMultihotDomainError
 
-    abstract type   CyclopsConstructorShapeError        <:  CyclopsConstructorError         end
-    abstract type   CyclopsMultiHotParameterShapeError  <:  CyclopsConstructorShapeError    end
-    #                  ├── CyclopsMultiHotMatrixShapeError
-    #                  └── CyclopsMultiHotOffsetShapeError
+    # abstract type   CyclopsConstructorShapeError        <:  CyclopsConstructorError         end
+    # abstract type   CyclopsMultiHotParameterShapeError  <:  CyclopsConstructorShapeError    end
+    # #                  ├── CyclopsMultiHotMatrixShapeError
+    # #                  └── CyclopsMultiHotOffsetShapeError
 
-    abstract type   CyclopsDenseShapeError              <:  CyclopsConstructorShapeError    end
-    #                  └── CyclopsInverseDimensionMismatch
-    abstract type   CyclopsDenseDimensionError          <:  CyclopsDenseShapeError          end
-    #                  └── CyclopsDenseCompressionDimensionError
+    # abstract type   CyclopsDenseShapeError              <:  CyclopsConstructorShapeError    end
+    # #                  └── CyclopsInverseDimensionMismatch
+    # abstract type   CyclopsDenseDimensionError          <:  CyclopsDenseShapeError          end
+    # #                  └── CyclopsDenseCompressionDimensionError
 
-    # Function Errors
-    abstract type   CyclopsFunctionError                <:  CyclopsError                    end
-    #                  └── CyclopsMethodError
-    abstract type   CyclopsInputDimensionMismatch                <:  CyclopsFunctionError            end
-    #                  ├── CyclopsDimensionMismatch
-    #                  └── CyclopsMultiHotDimensionMismatch
+    # # Function Errors
+    # abstract type   CyclopsFunctionError                <:  CyclopsError                    end
+    # #                  └── CyclopsMethodError
+    # abstract type   CyclopsInputDimensionMismatch                <:  CyclopsFunctionError            end
+    # #                  ├── CyclopsDimensionMismatch
+    # #                  └── CyclopsMultiHotDimensionMismatch
 
-    abstract type   CyclopsBottleneckError                     <:  CyclopsFunctionError            end
-    #                  ├── CyclopsHypersphereDomainError
-    #                  └── CyclopsHypersphereDivideError
+    # abstract type   CyclopsBottleneckError                     <:  CyclopsFunctionError            end
+    # #                  ├── CyclopsHypersphereDomainError
+    # #                  └── CyclopsHypersphereDivideError
 
 
-    """
-        CyclopsConstructorHypersphereDomainError(c::Int)
+    # """
+    #     CyclopsConstructorHypersphereDomainError(c::Int)
 
-    An error when `c < 2`.
+    # An error when `c < 2`.
 
-    # Examples
-    ```julia-repl
-    julia> n = 5; m = 0; c = 1; cyclops(n, m, c)
-    ERROR: CyclopsConstructorHypersphereDomainError: `c` = 1, but `c` must be ≥ 2.
-    [...]
-    ```
+    # # Examples
+    # ```julia-repl
+    # julia> n = 5; m = 0; c = 1; cyclops(n, m, c)
+    # ERROR: CyclopsConstructorHypersphereDomainError: `c` = 1, but `c` must be ≥ 2.
+    # [...]
+    # ```
 
-    # Supertype Hierarchy
-        CyclopsConstructorHypersphereDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
+    # # Supertype Hierarchy
+    #     CyclopsConstructorHypersphereDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
 
-    # See also
-    [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorInputAndHypersphereDomainError`](@ref),
-    [`CyclopsConstructorMultiHotDomainError`](@ref), [`cyclops`](@ref)
-    """
-    struct CyclopsConstructorHypersphereDomainError <: CyclopsConstructorDomainError 
-        c::Int
-    end
+    # # See also
+    # [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorInputAndHypersphereDomainError`](@ref),
+    # [`CyclopsConstructorMultihotDomainError`](@ref), [`cyclops`](@ref)
+    # """
+    # struct CyclopsConstructorHypersphereDomainError <: CyclopsConstructorDomainError 
+    #     c::Int
+    # end
     
-    Base.showerror(io::IO, e::CyclopsConstructorHypersphereDomainError) = begin
-        print(io, "CyclopsConstructorHypersphereDomainError: `c` = $(e.c), but `c` must be ≥ 2.")
-    end
+    # Base.showerror(io::IO, e::CyclopsConstructorHypersphereDomainError) = begin
+    #     print(io, "CyclopsConstructorHypersphereDomainError: `c` = $(e.c), but `c` must be ≥ 2.")
+    # end
 
-    """
-        CyclopsConstructorInputAndHypersphereDomainError(n::Int, c::Int)
+    # """
+    #     CyclopsConstructorInputAndHypersphereDomainError(n::Int, c::Int)
 
-    An error when `n ≤ c`.
+    # An error when `n ≤ c`.
 
-    # Examples
-    ```julia-repl
-    julia> n = 5; m = 0; c = 5; cyclops(n, m, c)
-    ERROR: CyclopsConstructorInputAndHypersphereDomainError: `n` = 5 ≤ `c`, but `n` must be > 5.
-    [...]
-    ```
+    # # Examples
+    # ```julia-repl
+    # julia> n = 5; m = 0; c = 5; cyclops(n, m, c)
+    # ERROR: CyclopsConstructorInputAndHypersphereDomainError: `n` = 5 ≤ `c`, but `n` must be > 5.
+    # [...]
+    # ```
 
-    # Supertype Hierarchy
-        CyclopsConstructorInputAndHypersphereDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
+    # # Supertype Hierarchy
+    #     CyclopsConstructorInputAndHypersphereDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
 
-    # See also
-    [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorHypersphereDomainError`](@ref),
-    [`CyclopsConstructorMultiHotDomainError`](@ref), [`cyclops`](@ref)
-    """
-    struct CyclopsConstructorInputAndHypersphereDomainError <: CyclopsConstructorDomainError 
-        n::Int
-        c::Int
-    end
+    # # See also
+    # [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorHypersphereDomainError`](@ref),
+    # [`CyclopsConstructorMultihotDomainError`](@ref), [`cyclops`](@ref)
+    # """
+    # struct CyclopsConstructorInputAndHypersphereDomainError <: CyclopsConstructorDomainError 
+    #     n::Int
+    #     c::Int
+    # end
 
-    Base.showerror(io::IO, e::CyclopsConstructorInputAndHypersphereDomainError) = begin
-        print(io, "CyclopsConstructorInputAndHypersphereDomainError: `n` = $(e.n) ≤ `c`, but `n` must be > $(e.c).")
-    end
+    # Base.showerror(io::IO, e::CyclopsConstructorInputAndHypersphereDomainError) = begin
+    #     print(io, "CyclopsConstructorInputAndHypersphereDomainError: `n` = $(e.n) ≤ `c`, but `n` must be > $(e.c).")
+    # end
 
-    """
-        CyclopsConstructorMultiHotDomainError(m::Int)
+    # """
+    #     CyclopsConstructorMultihotDomainError(m::Int)
 
-    An error when `m < 0`.
+    # An error when `m < 0`.
 
-    # Examples
-    ```julia-repl
-    julia> n = 5; m = -1; c = 3; cyclops(n, m, c)
-    ERROR: CyclopsConstructorMultiHotDomainError: `m` = -1 < 0, but `m` must be ≥ 0
-    [...]
-    ```
+    # # Examples
+    # ```julia-repl
+    # julia> n = 5; m = -1; c = 3; cyclops(n, m, c)
+    # ERROR: CyclopsConstructorMultihotDomainError: `m` = -1 < 0, but `m` must be ≥ 0
+    # [...]
+    # ```
 
-    # Supertype Hierarchy
-        CyclopsConstructorMultiHotDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
+    # # Supertype Hierarchy
+    #     CyclopsConstructorMultihotDomainError <: CyclopsConstructorDomainError <: CyclopsConstructorError <: CyclopsError <: Exception <: Any
 
-    # See also
-    [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorHypersphereDomainError`](@ref),
-    [`CyclopsConstructorInputAndHypersphereDomainError`](@ref), [`cyclops`](@ref)
-    """
-    struct CyclopsConstructorMultiHotDomainError <: CyclopsConstructorDomainError 
-        m::Int
-    end
+    # # See also
+    # [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorHypersphereDomainError`](@ref),
+    # [`CyclopsConstructorInputAndHypersphereDomainError`](@ref), [`cyclops`](@ref)
+    # """
+    # struct CyclopsConstructorMultihotDomainError <: CyclopsConstructorDomainError 
+    #     m::Int
+    # end
 
-    Base.showerror(io::IO, e::CyclopsConstructorMultiHotDomainError) = begin
-        print(io, "CyclopsConstructorMultiHotDomainError: `m` = $(e.m) < 0, but `m` must be ≥ 0.")
-    end
+    # Base.showerror(io::IO, e::CyclopsConstructorMultihotDomainError) = begin
+    #     print(io, "CyclopsConstructorMultihotDomainError: `m` = $(e.m) < 0, but `m` must be ≥ 0.")
+    # end
 
     """
         CheckCyclopsConstructorInput(n::Int, m::Int, c::Int)
@@ -185,11 +191,11 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     # Errors
     - `CyclopsConstructorHypersphereDomainError` when `c < 2`
     - `CyclopsConstructorInputAndHypersphereDomainError` when `n ≤ c`
-    - `CyclopsConstructorMultiHotDomainError` when `m < 0`
+    - `CyclopsConstructorMultihotDomainError` when `m < 0`
 
     # See also
     [`CyclopsConstructorHypersphereDomainError`](@ref), [`CyclopsConstructorInputAndHypersphereDomainError`](@ref)
-    [`CyclopsConstructorMultiHotDomainError`](@ref), [`cyclops`](@ref)
+    [`CyclopsConstructorMultihotDomainError`](@ref), [`cyclops`](@ref)
 
     # Examples
     ```julia-repl
@@ -202,14 +208,14 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     [...]
 
     julia> n = 5; m = -1; c = 3; CYCLOPS.CheckCyclopsConstructorInput(n, m, c)
-    ERROR: CyclopsConstructorMultiHotDomainError: `m` = -1 < 0, but `m` must be ≥ 0
+    ERROR: CyclopsConstructorMultihotDomainError: `m` = -1 < 0, but `m` must be ≥ 0
     [...]
     ```
     """
     function CheckCyclopsConstructorInput(n::Int, m::Int, c::Int)
         c ≥ 2 || throw(CyclopsConstructorHypersphereDomainError(c))
         n > c || throw(CyclopsConstructorInputAndHypersphereDomainError(n, c))
-        m ≥ 0 || throw(CyclopsConstructorMultiHotDomainError(m))
+        m ≥ 0 || throw(CyclopsConstructorMultihotDomainError(m))
 
         return nothing
     end
@@ -435,11 +441,11 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     Throws:
     - `CyclopsConstructorHypersphereDomainError` when `c < 2`
     - `CyclopsConstructorInputAndHypersphereDomainError` when `n ≤ c`
-    - `CyclopsConstructorMultiHotDomainError` when `m < 0`
+    - `CyclopsConstructorMultihotDomainError` when `m < 0`
 
     # See also
     [`CheckCyclopsConstructorInput`](@ref), [`CyclopsConstructorHypersphereDomainError`](@ref),
-    [`CyclopsConstructorInputAndHypersphereDomainError`](@ref), [`CyclopsConstructorMultiHotDomainError`](@ref)
+    [`CyclopsConstructorInputAndHypersphereDomainError`](@ref), [`CyclopsConstructorMultihotDomainError`](@ref)
     """
     struct cyclops
         scale::Array{Float32}

@@ -1,4 +1,4 @@
-module CYCLOPS
+module Cyclops
 
 include("CyclopsErrors.jl")
 
@@ -33,15 +33,15 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
 
     # Examples
     ```julia-repl
-    julia> n = 5; m = 0; c = 1; CYCLOPS.CheckCyclopsConstructorInput(n, m, c)
+    julia> n = 5; m = 0; c = 1; Cyclops.CheckCyclopsConstructorInput(n, m, c)
     ERROR: CyclopsHypersphereDomainError: `c` = 1, but `c` must be ≥ 2.
     [...]
 
-    julia> n = 5; m = 0; c = 5; CYCLOPS.CheckCyclopsConstructorInput(n, m, c)
+    julia> n = 5; m = 0; c = 5; Cyclops.CheckCyclopsConstructorInput(n, m, c)
     ERROR: CyclopsInputAndHypersphereDomainError: `n` = 5 ≤ `c`, but `n` must be > 5 or `c` must be < 5.
     [...]
 
-    julia> n = 5; m = -1; c = 3; CYCLOPS.CheckCyclopsConstructorInput(n, m, c)
+    julia> n = 5; m = -1; c = 3; Cyclops.CheckCyclopsConstructorInput(n, m, c)
     ERROR: CyclopsMultihotDomainError: `m` = -1 < 0, but `m` must be ≥ 0
     [...]
     ```
@@ -310,7 +310,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
     end
 
     function (m::cyclops)(input_data::Vector{Float32}, multihot::Missing=missing; silence::Bool=false)::Array{Float32}
-        silence || length(m.scale) == 0 || @warn "CYCLOPS model with multi-hot parameters used without multi-hot encoding."
+        silence || length(m.scale) == 0 || @warn "Cyclops model with multi-hot parameters used without multi-hot encoding."
         CheckCyclopsInput(input_data, multihot, m.scale)
         dense_encoding = m.densein(input_data)
         circular_encoding = hsn(dense_encoding)
@@ -421,7 +421,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
 
     # Examples
     ```julia-repl
-    julia> using CYCLOPS, Random
+    julia> using Cyclops, Random
 
     julia> Random.seed!(1234);
 
@@ -483,7 +483,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
 
     # Examples 
     ```julia-repl
-    julia> using CYCLOPS, Random
+    julia> using Cyclops, Random
 
     julia> Random.seed!(1234);
 
@@ -816,7 +816,7 @@ using CUDA, Flux, Statistics, ProgressMeter, Plots, Random
 
     # Examples
     ```julia-repl
-    julia> using CYCLOPS, Random
+    julia> using Cyclops, Random
 
     julia> Random.seed!(1234); covariate_cyclops_model = cyclops(5,3);
 

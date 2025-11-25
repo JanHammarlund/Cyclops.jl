@@ -1,10 +1,10 @@
-using CYCLOPS
+using Cyclops
 using Test
 using Random
 using Flux
 using InteractiveUtils: subtypes
 
-@testset "CYCLOPS" begin
+@testset "Cyclops" begin
 
 @testset "Cyclops Error Hierarchy" begin
     cyclops_error_hierarchy = Dict(

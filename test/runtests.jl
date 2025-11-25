@@ -1,4 +1,4 @@
-using CYCLOPS
+using Cyclops
 using Test
 
 @testset "CYCLOPS.jl" begin

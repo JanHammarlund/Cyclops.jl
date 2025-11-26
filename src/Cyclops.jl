@@ -29,4 +29,6 @@ export mhe, hsn, mhd
 Flux.@layer cyclops
 export cyclops
 
+include("CyclopsOptimization.jl")
+
 end

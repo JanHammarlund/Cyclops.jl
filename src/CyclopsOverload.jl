@@ -105,7 +105,7 @@ TO DO:
 - Both methods for covariate model
 - Only one method for non-covariate model
 """
-function (m::cyclops)(input_data::Vector{Float32}, multihot::Vector{Int32})::Array{Float32}
+function (m::cyclops)(input_data::AbstractVector{T}, multihot::AbstractVector{<:Integer}) where {T<:AbstractFloat}
     CheckCyclopsInput(input_data, multihot, m.scale)
     multihot_encoding = mhe(input_data, multihot, m, skip_check=true)
     dense_encoding = m.densein(multihot_encoding)
@@ -115,7 +115,7 @@ function (m::cyclops)(input_data::Vector{Float32}, multihot::Vector{Int32})::Arr
     return output
 end
 
-function (m::cyclops)(input_data::Vector{Float32}, multihot::Missing=missing; silence::Bool=false)::Array{Float32}
+function (m::cyclops)(input_data::AbstractVector{T}, multihot::Missing=missing; silence::Bool=false) where {T<:AbstractFloat}
     silence || length(m.scale) == 0 || @warn "Cyclops model with multi-hot parameters used without multi-hot encoding."
     CheckCyclopsInput(input_data, multihot, m.scale)
     dense_encoding = m.densein(input_data)
@@ -124,6 +124,24 @@ function (m::cyclops)(input_data::Vector{Float32}, multihot::Missing=missing; si
     return output
 end
 
+function (m::cyclops)(input_data::AbstractMatrix{T}, multi_hot::AbstractMatrix{<:Integer}) where {T<:AbstractFloat}
+    size(input_data, 2) == size(multi_hot, 2) || throw(DimensionMismatch("`x` and `h` do not have matching number of columns."))
+    output = similar(input_data)
+    @inbounds for jj in axes(input_data, 2)
+        xj = view(input_data, :, jj)
+        hj = view(multi_hot, :, jj)
+        output[:, jj] = m(xj, hj)
+    end
+    return output
+end
+
+function (m::cyclops)(input_data::AbstractMatrix{T}, multi_hot::Missing=missing; silence::Bool=false) where {T<:AbstractFloat}
+    output = similar(input_data)
+    @inbounds for (jj, xj) in enumerate(eachcol(input_data))
+        output[:, jj] = m(xj, multi_hot, silence = silence)
+    end
+    return output
+end
 
 
 
@@ -137,14 +155,14 @@ end
 Checks inputs to multi-hot transformation and returns `nothing` if input data `x` and multi-hot parameters `m` have the
 same number of rows, and if the multi-hot encoding `h` has as many rows as the multi-hot parameters `m` have columns.
 """
-function CheckCyclopsInput(x::Vector{Float32}, h::Vector{Int32}, m::Array{Float32})
+function CheckCyclopsInput(x::AbstractVector{T}, h::AbstractVector{<:Integer}, m::Array{Float32}) where {T<:AbstractFloat}
     (length(x) != size(m, 1)) && throw(CyclopsInputDimensionMismatch(x, m))
     (length(h) != size(m, 2)) && throw(CyclopsMultihotDimensionMismatch(h, m))
 
     return nothing
 end
 
-function CheckCyclopsInput(x::Vector{Float32}, h::Missing, m::Array{Float32})
+function CheckCyclopsInput(x::AbstractVector{T}, h::Missing, m::Array{Float32}) where {T<:AbstractFloat}
     (length(x) != size(m, 1)) && throw(CyclopsInputDimensionMismatch(x, m))
 
     return nothing

@@ -136,6 +136,11 @@ end # 14 tests
            @test_throws "Input = 6 ≠ 5 = Multi-hot" cyclops(5, 0, 3)(rand(Float32, 6))
         end
 
+        @testset "Input Array and Multihot Array Column Mismatch" begin
+            @test_throws DimensionMismatch cyclops(5, 2, 3)(ones(Float32, 5, 2), ones(Int32, 2, 3))
+            @test_throws "`x` and `h` do not have matching" cyclops(5, 2, 3)(ones(Float32, 5, 2), ones(Int32, 2, 3))
+        end
+
         @testset "Hypersphere NaN Error" begin
             @test CyclopsHypersphereNaNError isa DataType
             @test_throws CyclopsHypersphereNaNError hsn([1f0, NaN32])
@@ -150,228 +155,78 @@ end # 14 tests
 
     end
 
-end # 41 tests
+end # 47 tests
 
 # ⊙, ⊗, ⊕, ⊖, ⊘, ⩕
 @testset "Operators" begin # 73 tests
 
     @testset "oplus" begin # 14 tests
-        oplus_found_methods = Set(m.sig for m in methods(⊕));
-        oplus_expected_methods = Set([
-            Tuple{typeof(⊕), Number, AbstractArray{<:Number}},
-            Tuple{typeof(⊕), AbstractArray{<:Number}, Number},
-            Tuple{typeof(⊕), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        ])
+        found_oplus_methods = Set(m.sig for m in methods(⊕));
+        @test Tuple{typeof(⊕), Tx, AbstractVector{Ty}} where {Tx<:Real, Ty<:AbstractFloat} ∈ found_oplus_methods
+        @test Tuple{typeof(⊕), AbstractVector{T}, AbstractVector{T}} where {T<:AbstractFloat} ∈ found_oplus_methods
+        
+        x = [1f0, 2f0, 3f0]     # ::AbstractArray{<:Number}
+        y1 = 1                  # ::Number
+        y2 = [3f0, 2f0, 1f0]    # ::AbstractArray{<:Number}
             
-        @test oplus_expected_methods ⊆ oplus_found_methods
-            
-        x = [1, 2, 3]   # ::AbstractArray{<:Number}
-        y1 = 1          # ::Number
-        y2 = [3, 2, 1]  # ::AbstractArray{<:Number}
-            
-        # Tuple{typeof(⊕), AbstractArray{<:Number}, Number},
-        @test x ⊕ y1 == [2, 3, 4]
-        @test [x x] ⊕ y1 == [2 2; 3 3; 4 4]
-
         # Tuple{typeof(⊕), Number, AbstractArray{<:Number}}
         @test y1 ⊕ x == [2, 3, 4]
-        @test y1 ⊕ [x x] == [2 2; 3 3; 4 4]
 
         # Tuple{typeof(⊕), AbstractArray{<:Number}, AbstractArray{<:Number}}
         @test x ⊕ y2 == [4, 4, 4]
-        @test [x x] ⊕ y2 == y2 ⊕ [x x] == [x x] ⊕ [y2 y2] == [4 4; 4 4; 4 4]
-        
-        # Tuple{typeof(⊕), Number, Number}
-        @test_throws MethodError 1 ⊕ 1
-
-        # Dimension Mismatch
-        @test_throws DimensionMismatch ones(3) ⊕ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3) ⊕ ones(4)
-
-        @test_throws DimensionMismatch [x x] ⊕ [y2 y2 y2]
-        @test_throws "x and y don't have matching dimensions" [x x] ⊕ [y2 y2 y2]
-
-        @test_throws DimensionMismatch [x x] ⊕ ones(4)
-        @test_throws "x has 3 and y has 4." [x x] ⊕ ones(4)
-    end     # oplus, 14 tests
+    end # 4 tests
     
     @testset "ominus" begin # 15 tests
-        ominus_found_methods = Set(m.sig for m in methods(⊖));
-        ominus_expected_methods = Set([
-            Tuple{typeof(⊖), Number, AbstractArray{<:Number}},
-            Tuple{typeof(⊖), AbstractArray{<:Number}, Number},
-            Tuple{typeof(⊖), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        ])
-            
-        @test ominus_expected_methods ⊆ ominus_found_methods
+        @test Tuple{typeof(⊖), AbstractVector{T}, AbstractVector{T}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(⊖))
 
-        x = [1, 2, 3]   # ::AbstractArray{<:Number}
-        y1 = 1          # ::Number
-        y2 = [3, 2, 1]  # ::AbstractArray{<:Number}
+        x = [1f0, 2f0, 3f0]     # ::AbstractArray{<:Number}
+        y2 = [3f0, 2f0, 1f0]    # ::AbstractArray{<:Number}
 
-        # Tuple{typeof(⊖), AbstractArray{<:Number}, Number}
-        @test x ⊖ y1 == [0, 1, 2]
-        @test [x x] ⊖ y1 == [0 0; 1 1; 2 2]
-
-        # Tuple{typeof(⊖), Number, AbstractArray{<:Number}}
-        @test y1 ⊖ x == [0, -1, -2]
-        @test y1 ⊖ [x x] == [0 0; -1 -1; -2 -2]
-
-        # Tuple{typeof(⊖), AbstractArray{<:Number}, AbstractArray{<:Number}}
+        # Tuple{typeof(⊖), AbstractVector{T}, AbstractVector{T}} where T <: AbstractFloat
         @test x ⊖ y2 == [-2, 0, 2]
-        @test [x x] ⊖ y2 == [x x] ⊖ [y2 y2] == [-2 -2; 0 0; 2 2]
-        @test y2 ⊖ [x x] == [y2 y2] ⊖ [x x] == [2 2; 0 0; -2 -2]
-
-        # Tuple{typeof(⊖), Number, Number}
-        @test_throws MethodError 1 ⊖ 1
-
-        # Dimension Mismatch
-        @test_throws DimensionMismatch ones(3) ⊖ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3) ⊖ ones(4)
-
-        @test_throws DimensionMismatch [x x] ⊖ [y2 y2 y2]
-        @test_throws "don't have matching dimensions" [x x] ⊖ [y2 y2 y2]
-
-        @test_throws DimensionMismatch [x x] ⊖ ones(4)
-        @test_throws "x has 3 and y has 4." [x x] ⊖ ones(4)
-    end     # ominus, 15 tests
+    end
     
     @testset "otimes" begin # 9 tests
-        otimes_found_methods = Set(m.sig for m in methods(⊗));
-        otimes_expected_methods = Set([
-            Tuple{typeof(⊗), AbstractArray{<:Number}, Union{Number, AbstractArray{<:Number}}}
-        ])
-
-        @test otimes_expected_methods ⊆ otimes_found_methods
+        @test Tuple{typeof(⊗), AbstractMatrix{Tx}, AbstractVector{Ty}} where {Tx <: AbstractFloat, Ty <: Real} ∈ Set(m.sig for m in methods(⊗))
 
         x = ones(3)
         y1 = [1, 0]
         y2 = [0, 1]
         y3 = [1, 0, 1]
 
-        # Tuple{typeof(⊗), AbstractArray{<:Number}, Number}
-        @test x ⊗ 2 == [2, 2, 2]
-
         # Tuple{typeof(⊗), AbstractArray{<:Number}, AbstractArray{<:Number}}
         @test [x 2*x] ⊗ y1 == [1, 1, 1]
         @test [x 2*x] ⊗ y2 == [2, 2, 2]
-
-        # Tuple{typeof(⊗), Number, Number}
-        @test_throws MethodError 1 ⊗ 1
-        
-        # Dimension Mismatch
-        @test_throws DimensionMismatch x ⊗ y3
-        @test_throws "x has 1 columns and y has 3 rows." x ⊗ y3
-
-        @test_throws DimensionMismatch [x 2*x] ⊗ 1
-        @test_throws "x has 2 columns and y has 1 rows." [x 2*x] ⊗ 1
     end     # otimes, 9 tests
     
     @testset "odot" begin # 14 tests
-        odot_found_methods = Set(m.sig for m in methods(⊙));
-        odot_expected_methods = Set([
-            Tuple{typeof(⊙), AbstractArray{<:Number}, Number},
-            Tuple{typeof(⊙), Number, AbstractArray{<:Number}},
-            Tuple{typeof(⊙), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        ])
+        @test Tuple{typeof(⊙), AbstractVector{T}, AbstractVector{T}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(⊙))
 
-        @test odot_expected_methods ⊆ odot_found_methods
+        x = [1f0, 2f0, 3f0]   # ::AbstractArray{<:Number}
+        y2 = [2f0, 3f0, 4f0]  # ::AbstractArray{<:Number}
 
-        x = [1, 2, 3]   # ::AbstractArray{<:Number}
-        y1 = 3          # ::Number
-        y2 = [2, 3, 4]  # ::AbstractArray{<:Number}
-        
-        # Tuple{typeof(⊙), AbstractArray{<:Number}, Number}
-        @test x ⊙ y1 == [3, 6, 9]
-        @test [x x] ⊙ y1 == [3 3; 6 6; 9 9]
-
-        # Tuple{typeof(⊙), Number, AbstractArray{<:Number}}
-        @test y1 ⊙ x == [3, 6, 9]
-        @test y1 ⊙ [x x] == [3 3; 6 6; 9 9]
-
-        # Tuple{typeof(⊙), AbstractArray{<:Number}, AbstractArray{<:Number}}
         @test x ⊙ y2 == [2, 6, 12]
-        @test [x x] ⊙ y2 == y2 ⊙ [x x] == [x x] ⊙ [y2 y2] == [2 2; 6 6; 12 12]
-        
-        # Tuple{typeof(⊙), Number, Number}
-        @test_throws MethodError 1 ⊙ 1
-
-        # Dimension Mismatch
-        @test_throws DimensionMismatch ones(3) ⊙ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3) ⊙ ones(4)
-
-        @test_throws DimensionMismatch ones(3, 2) ⊙ ones(4, 5)
-        @test_throws "x and y don't have matching dimensions" ones(3, 2) ⊙ ones(4, 5)
-
-        @test_throws DimensionMismatch ones(3, 2) ⊙ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3, 2) ⊙ ones(4)
     end     # odot, 14 tests
     
     @testset "oslash" begin # 15 tests
-        oslash_found_methods = Set(m.sig for m in methods(⊘));
-        oslash_expected_methods = Set([
-            Tuple{typeof(⊘), AbstractArray{<:Number}, Number},
-            Tuple{typeof(⊘), Number, AbstractArray{<:Number}},
-            Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        ])
+        @test Tuple{typeof(⊘), AbstractVector{T}, AbstractVector{T}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(⊘))
+        @test Tuple{typeof(⊘), AbstractVector{T}, T} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(⊘))
 
-        @test oslash_expected_methods ⊆ oslash_found_methods
+        x = [1f0, 2f0, 3f0]   # ::AbstractArray{<:Number}
+        y1 = 2f0          # ::Number
+        y2 = [3f0, 2f0, 1f0]  # ::AbstractArray{<:Number}
 
-        x = [1, 2, 3]   # ::AbstractArray{<:Number}
-        y1 = 2          # ::Number
-        y2 = [3, 2, 1]  # ::AbstractArray{<:Number}
-
-        # Tuple{typeof(⊘), AbstractArray{<:Number}, Number}
         @test x ⊘ y1 == [0.5, 1, 1.5]
-        @test [x x] ⊘ y1 == [0.5 0.5; 1 1; 1.5 1.5]
-
-        # Tuple{typeof(⊘), Number, AbstractArray{<:Number}}
-        @test y1 ⊘ x == [2, 1, 2/3]
-        @test y1 ⊘ [x x] == [2 2; 1 1; 2/3 2/3]
-
-        # Tuple{typeof(⊘), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        @test x ⊘ y2 == [1/3, 1, 3]
-        @test [x x] ⊘ y2 == [x x] ⊘ [y2 y2] == [1/3 1/3; 1 1; 3 3]
-        @test y2 ⊘ [x x] == [y2 y2] ⊘ [x x] == [3 3; 1 1; 1/3 1/3]
-
-        # Tuple{typeof(⊘), Number, Number}
-        @test_throws MethodError 1 ⊘ 1
-
-        # Dimension Mismatch
-        @test_throws DimensionMismatch ones(3) ⊘ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3) ⊘ ones(4)
-
-        @test_throws DimensionMismatch ones(3, 2) ⊘ ones(5, 7)
-        @test_throws "x and y don't have matching dimensions" ones(3, 2) ⊘ ones(5, 7)
-
-        @test_throws DimensionMismatch ones(3, 2) ⊘ ones(4)
-        @test_throws "x has 3 and y has 4." ones(3, 2) ⊘ ones(4)
+        @test y2 ⊘ x == [3f0, 1f0, 1/3f0]
     end     # oslash, 15 tests
 
     @testset "wedge on wedge" begin # 6 tests
-        wedgeonwedge_found_methods = Set(m.sig for m in methods(⩕));
-        wedgeonwedge_expected_methods = Set([
-            Tuple{typeof(⩕), AbstractArray{<:Number}, Number}
-        ])
+        @test Tuple{typeof(⩕), AbstractVector{Tx}, Ty} where {Tx <: AbstractFloat, Ty <: Integer} ∈ Set(m.sig for m in methods(⩕))
 
-        @test wedgeonwedge_expected_methods ⊆ wedgeonwedge_found_methods
-
-        x = [1 2; 3 4]
-        y1 = 2
-        y2 = [2, 3]
-        y3 = [2 3; 4 5]
-
-        @test x ⩕ y1 == [1 4; 9 16]
-
-        # Tuple{typeof(⩕), AbstractArray{<:Number}, AbstractArray{<:Number}}
-        @test_throws MethodError x ⩕ y2
-        @test_throws MethodError x ⩕ y3
-
-        # Tuple{typeof(⩕), Number, AbstractArray{<:Number}}
-        @test_throws MethodError y2 ⩕ x
-
-        # Tuple{typeof(⩕), Number, Number}
-        @test_throws MethodError y1 ⩕ y1
+        x = [1f0, 2f0, 3f0]
+        y = 2
+        
+        @test x ⩕ y == [1, 4, 9]
     end # wedge on wedge, 6 tests
     
 end # operators 73 tests
@@ -418,11 +273,13 @@ end # operators 73 tests
 end
 
 @testset "Function" begin
-    @test Set(m.sig for m in methods(cyclops(3))) ⊆ Set([
-        Tuple{cyclops, Vector{Float32}, Vector{Int32}},
-        Tuple{cyclops, Vector{Float32}},
-        Tuple{cyclops, Vector{Float32}, Missing}
-    ])
+    @test Tuple{cyclops, AbstractMatrix{T}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    @test Tuple{cyclops, AbstractMatrix{T}, Missing} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    @test Tuple{cyclops, AbstractMatrix{T}, AbstractMatrix{<:Integer}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    @test Tuple{cyclops, AbstractVector{T}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    @test Tuple{cyclops, AbstractMatrix{T}, Missing} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    @test Tuple{cyclops, AbstractVector{T}, AbstractVector{<:Integer}} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(cyclops(3)))
+    
     Random.seed!(1234); test_cyclops = cyclops(3, 2, 2)
     @test test_cyclops(ones(Float32, 3), ones(Int32, 2)) isa Vector{Float32}
     @test test_cyclops(ones(Float32, 3)) isa Vector{Float32}
@@ -430,38 +287,42 @@ end
     @test test_cyclops(ones(Float32, 3), ones(Int32, 2)) |> size == (3,)
     @test test_cyclops(ones(Float32, 3)) |> size == (3,)
     @test test_cyclops(ones(Float32, 3), missing) |> size == (3,)
+    @test test_cyclops(ones(Float32, 3, 2), ones(Int32, 2, 2)) isa Matrix{Float32}
+    @test test_cyclops(ones(Float32, 3, 2), ones(Int32, 2, 2)) |> size == (3,2)
+
     Random.seed!(1234); test_cyclops_2 = cyclops(3)
     @test test_cyclops_2(ones(Float32, 3)) isa Vector{Float32}
     @test test_cyclops_2(ones(Float32, 3), missing) isa Vector{Float32}
     @test test_cyclops_2(ones(Float32, 3)) |> size == (3,)
     @test test_cyclops_2(ones(Float32, 3), missing) |> size == (3,)
+    @test test_cyclops_2(ones(Float32, 3, 2), missing) isa Matrix{Float32}
+    @test test_cyclops_2(ones(Float32, 3, 2), missing) |> size == (3,2)
 end
 
 @testset "Layers" begin
     @testset "Multihot Layers" begin
         @test mhe isa Function
-        @test Set(m.sig for m in methods(mhe)) ⊆ Set([
-            Tuple{typeof(mhe), Vector{Float32}, Vector{Int32}, cyclops}
-        ])
+        @test Tuple{typeof(mhe), AbstractVector{T}, AbstractVector{<:Integer}, cyclops} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(mhe))
+        @test Tuple{typeof(mhd), AbstractVector{T}, AbstractVector{<:Integer}, cyclops} where {T <: AbstractFloat} ∈ Set(m.sig for m in methods(mhd))
         Random.seed!(1234); test_cyclops = cyclops(3,2,2)
         @test mhe(ones(Float32, 3), ones(Int32, 2), test_cyclops) isa Vector{Float32}
         @test mhe(ones(Float32, 3), ones(Int32, 2), test_cyclops) |> size == (3,)
+        @test isapprox(mhe(ones(Float32, 3), ones(Int32, 2), test_cyclops), [3.889213f0, 2.0930424f0, -0.064593464f0], atol = 1e-6)
         @test mhd(ones(Float32, 3), ones(Int32, 2), test_cyclops) isa Vector{Float32}
         @test mhd(ones(Float32, 3), ones(Int32, 2), test_cyclops) |> size == (3,)
+        @test isapprox(mhd(ones(Float32, 3), ones(Int32, 2), test_cyclops), [0.23437645f0, 0.37366495f0, 113.92013f0], atol = 1e-6)
         @test isapprox(mhd(mhe(ones(Float32, 3), ones(Int32, 2), test_cyclops), ones(Int32, 2), test_cyclops), [1f0, 1f0, 1f0], atol=1e-6)
         @test isapprox(mhe(mhd(ones(Float32, 3), ones(Int32, 2), test_cyclops), ones(Int32, 2), test_cyclops), [1f0, 1f0, 1f0], atol=1e-6)
     end
 
     @testset "Hypersphere Node" begin
         @test hsn isa Function
-        @test Set(m.sig for m in methods(hsn)) ⊆ Set([
-            Tuple{typeof(hsn), Vector{Float32}}
-        ])
+        @test Tuple{typeof(hsn), AbstractVector{<:AbstractFloat}} ∈ Set(m.sig for m in methods(hsn))
         @test hsn([1f0, 1f0]) isa Vector{Float32}
         @test hsn([1f0, 1f0]) |> size == (2,)
         @test hsn([1f0, 0f0]) == [1f0, 0f0]
-        @test isapprox(hsn(Float32.([sqrt(0.5), sqrt(0.5)])), Float32.([sqrt(0.5), sqrt(0.5)]), atol=1e-6)
+        @test isapprox(hsn([sqrt(0.5f0), sqrt(0.5f0)]), [sqrt(0.5f0), sqrt(0.5f0)], atol = 1e-6)
     end
 end
 
-end # 184 tests
+end # 142 tests

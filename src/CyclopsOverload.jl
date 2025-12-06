@@ -116,7 +116,7 @@ function (m::cyclops)(input_data::AbstractVector{T}, multihot::AbstractVector{<:
 end
 
 function (m::cyclops)(input_data::AbstractVector{T}) where {T<:AbstractFloat}
-    length(m.scale) == 0 || @warn "Cyclops model with multi-hot parameters used without multi-hot encoding."
+    # length(m.scale) == 0 || @warn "Cyclops model with multi-hot parameters used without multi-hot encoding."
     CheckCyclopsInput(input_data, m.scale)
     dense_encoding = m.densein(input_data)
     circular_encoding = hsn(dense_encoding)
@@ -124,9 +124,9 @@ function (m::cyclops)(input_data::AbstractVector{T}) where {T<:AbstractFloat}
     return output
 end
 
-function (m::cyclops)(input_data::AbstractMatrix{T}, multi_hot::AbstractMatrix{<:Integer}) where {T<:AbstractFloat}
-    size(input_data, 2) == size(multi_hot, 2) || throw(DimensionMismatch("`x` and `h` do not have matching number of columns."))
-    return hcat(m(view(input_data, :, jj), view(multi_hot, :, jj)) for jj in axes(input_data, 2)...)
+function (m::cyclops)(input_data::AbstractMatrix{T}, multihot::AbstractMatrix{<:Integer}) where {T<:AbstractFloat}
+    size(input_data, 2) == size(multihot, 2) || throw(DimensionMismatch("`x` and `h` do not have matching number of columns."))
+    return hcat(m(view(input_data, :, jj), view(multihot, :, jj)) for jj in axes(input_data, 2)...)
 end
 
 function (m::cyclops)(input_data::AbstractMatrix{T}) where {T<:AbstractFloat}

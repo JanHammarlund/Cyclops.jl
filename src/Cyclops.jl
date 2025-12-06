@@ -20,6 +20,10 @@ export mhe, hsn, mhd
 Flux.@layer cyclops
 export cyclops
 
+include("CyclopsDecode.jl")
+export project, decode
+
 include("CyclopsOptimization.jl")
+export train!
 
 end

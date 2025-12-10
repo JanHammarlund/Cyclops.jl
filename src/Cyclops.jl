@@ -24,6 +24,8 @@ include("CyclopsDecode.jl")
 export project, decode
 
 include("CyclopsOptimization.jl")
-export train!
+export train!, mse
+
+include("CyclopsPlot.jl")
 
 end
